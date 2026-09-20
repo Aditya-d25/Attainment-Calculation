@@ -40,6 +40,17 @@ def get_db():
         db.close()
 
 
+@router.get("/config/current")
+def get_config():
+    """Get current AI configuration (must precede the dynamic ID route)."""
+    return ConfigResponse(
+        llm_provider=os.getenv("LLM_PROVIDER", "gemini"),
+        llm_model=os.getenv("LLM_MODEL", "gemini-flash-latest"),
+        embedding_model=os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2"),
+        mock_mode=os.getenv("MOCK_MODE", "true").lower() == "true",
+    )
+
+
 @router.post("/generate")
 def generate_mapping(request: MappingGenerateRequest, db: Session = Depends(get_db)):
     """Generate AI CO-PO/PSO mappings for a subject."""
@@ -134,14 +145,3 @@ def get_evaluation(subject_id: int, db: Session = Depends(get_db)):
         "subject_id": subject_id,
         "evaluations": results,
     }
-
-
-@router.get("/config/current")
-def get_config():
-    """Get current AI configuration."""
-    return ConfigResponse(
-        llm_provider=os.getenv("LLM_PROVIDER", "gemini"),
-        llm_model=os.getenv("LLM_MODEL", "gemini-3.6-flash"),
-        embedding_model=os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2"),
-        mock_mode=os.getenv("MOCK_MODE", "true").lower() == "true",
-    )

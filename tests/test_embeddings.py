@@ -69,9 +69,13 @@ class TestSentenceTransformerProvider:
     def test_similarity(self):
         from ai.embeddings import compute_similarity_matrix
 
-        co_texts = ["Apply and implement sorting algorithms using C"]
-        po_texts = ["Engineering knowledge", "Ethical responsibility"]
+        co_texts = ["Apply and implement sorting algorithms using C programming for software engineering solutions"]
+        po_texts = [
+            "Apply knowledge of mathematics, science, and engineering fundamentals to solve engineering problems",
+            "Apply ethical principles and commit to professional ethics and responsibilities"
+        ]
 
         matrix = compute_similarity_matrix(co_texts, po_texts, model_name="all-MiniLM-L6-v2")
-        # "sorting algorithms" should be more related to "engineering knowledge"
+        # "sorting algorithms for engineering solutions" should be more related to "engineering fundamentals"
         assert matrix[0][0] > matrix[0][1]
+

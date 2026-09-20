@@ -1,288 +1,127 @@
-# Attainment-Calculation: AI-Based Automated CO-PO Mapping & Outcome Attainment Engine
+# Outcome Studio — CO–PO/PSO Mapping & Attainment Workspace
 
-[![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688.svg?style=flat&logo=fastapi)](https://fastapi.tiangolo.com/)
-[![Python](https://img.shields.io/badge/Python-3.9%2B-blue.svg?logo=python)](https://www.python.org/)
-[![MySQL](https://img.shields.io/badge/Database-MySQL-4479A1.svg?logo=mysql)](https://www.mysql.com/)
-[![Gemini](https://img.shields.io/badge/AI%20Model-Gemini%203.6%20Flash-orange.svg?logo=google)](https://ai.google.dev/)
-[![License](https://img.shields.io/badge/License-Academic%20Project-green.svg)]()
-
-An end-to-end outcome-based education (OBE) platform for automatically generating, reviewing, and calculating **Course Outcome (CO) to Program Outcome (PO/PSO)** mappings and **outcome attainments** using a hybrid Dense Vector Embedding (`all-MiniLM-L6-v2`) and Large Language Model (`Google Gemini 3.6 Flash`) reasoning pipeline.
+An explainable, faculty-in-the-loop CO–PO/PSO matrix generation and outcome attainment platform for higher education institutions (SPPU, AICTE, NEP-2020).
 
 ---
 
-## 📌 Problem Statement
+## 🌟 Key Features
 
-In Outcome-Based Education (OBE) and NBA accreditation, faculty members must manually map each Course Outcome (CO) to 12 Program Outcomes (POs) and several Program Specific Outcomes (PSOs). This process is:
-- **Time-consuming and subjective**: prone to faculty bias and inconsistent mapping levels across departments.
-- **Difficult to justify**: lacking concrete evidence and Bloom's Taxonomy reasoning.
-- **Complex to compute**: requiring manual calculation of University Exam attainments, Continuous Internal Evaluations (CIE), and weighted PO attainments across matrices.
-
----
-
-## 💡 Solution Overview
-
-This system provides a unified web-based workflow:
-1. **Automated AI Mapping**: Extracts Bloom's verbs and domain concepts, computes dense vector cosine similarities, and applies Gemini 3.6 Flash reasoning with semantic fallback to determine relationship levels (0–3) with explanations and confidence scores.
-2. **Outcome Attainment Engine**: Computes Course Outcome attainments and overall Program Outcome attainments using standardized NBA weighted formulas with real-time recalculation.
-3. **Faculty-in-the-Loop Review**: Human approval workflow allowing faculty to accept, edit, or reject AI suggestions.
-4. **Evaluation & Comparison**: Benchmarks AI outputs against historical faculty ground truth using accuracy, precision, recall, F1, and confusion matrices.
-5. **Excel Integration**: Imports reference Excel sheets and exports full accreditation-ready reports.
+- 🎓 **Programme Framework Catalogue**: Define Program Outcomes (POs) and Program Specific Outcomes (PSOs) centrally per department/stream pattern. Every course linked to the framework reuses canonical definitions.
+- 📄 **Automated PDF Syllabus Parsing**: Drag-and-drop university syllabus PDFs to automatically extract framework metadata, department, academic year, POs/PSOs, course codes, and Course Outcomes (COs).
+- 🤖 **Hybrid AI Mapping Engine**:
+  - **Semantic Vector Matcher**: Computes TF-IDF & cosine similarity for candidate pair identification.
+  - **LLM Reasoning**: Leverages Google Gemini AI to analyze Bloom's Taxonomy verbs, contextual alignment, and output detailed justifications.
+  - **Fallback Accreditation Engine**: Automatic fallback to deterministic pedagogical rules if offline or if LLM quota is reached.
+- 🔄 **Faculty-in-the-Loop & Adaptive Calibration**:
+  - **Cell Inspection**: Single-click any matrix cell to view reasoning, evidence snippet, semantic score, and confidence level.
+  - **Manual Override**: Double-click cell to override level (0–3) and record faculty review notes.
+  - **Feedback Learning**: Historical faculty overrides are retrieved as few-shot calibration examples for subsequent generations in the same framework.
+- 📊 **Comprehensive Excel Reports**: Export complete `.xlsx` reports containing the generated & finalized matrix, outcome catalogues, detailed cell explanations, and audit feedback logs.
 
 ---
 
-## 🏗️ System Architecture
+## 🛠️ Technology Stack
 
-```
-                      Course Outcome (CO) & Program Outcome (PO/PSO) Text
-                                               │
-                                               ▼
-                         ┌───────────────────────────────────────────┐
-                         │ 1. Text Preprocessor                      │
-                         │    • Normalize text & strip boilerplate   │
-                         │    • Extract Bloom's Taxonomy verbs       │
-                         │    • Extract domain keywords & concepts   │
-                         └─────────────────────┬─────────────────────┘
-                                               │
-                                               ▼
-                         ┌───────────────────────────────────────────┐
-                         │ 2. Semantic Embedding & Similarity        │
-                         │    • Model: all-MiniLM-L6-v2 (384-dim)    │
-                         │    • Pairwise Cosine Similarity Matrix    │
-                         │    • Candidate generation (threshold >0.2)│
-                         └─────────────────────┬─────────────────────┘
-                                               │
-                                               ▼
-                         ┌───────────────────────────────────────────┐
-                         │ 3. LLM Contextual Reasoner                │
-                         │    • Google Gemini 3.6 Flash API          │
-                         │    • Generates Level (0–3) & Justification│
-                         │    • Semantic fallback on rate limits     │
-                         └─────────────────────┬─────────────────────┘
-                                               │
-                                               ▼
-                         ┌───────────────────────────────────────────┐
-                         │ 4. Validation & Quality Agent             │
-                         │    • Enforces constraints & ranges        │
-                         │    • Auto-fixes format anomalies          │
-                         └─────────────────────┬─────────────────────┘
-                                               │
-                                               ▼
-                         ┌───────────────────────────────────────────┐
-                         │ 5. Outcome Attainment Engine              │
-                         │    • Total CO Attainment: (a*0.6)+(b*0.4) │
-                         │    • PO Attainment: Σ(CO_att*Lvl) / Σ(Lvl)│
-                         │    • Real-time editable matrix interface  │
-                         └─────────────────────┬─────────────────────┘
-                                               │
-                                               ▼
-                         ┌───────────────────────────────────────────┐
-                         │ 6. Faculty Review & Benchmark Evaluation  │
-                         │    • Accept / Edit / Reject workflow      │
-                         │    • Accuracy, F1, Confusion Matrix vs Ref│
-                         │    • Excel import / export                │
-                         └───────────────────────────────────────────┘
-```
+- **Backend Framework**: [FastAPI](https://fastapi.tiangolo.com/) (Python 3.10+)
+- **Database / ORM**: [SQLAlchemy](https://www.sqlalchemy.org/) (SQLite by default, MySQL compatible)
+- **AI & NLP**: [Google Generative AI (Gemini)](https://ai.google.dev/), Scikit-Learn (TF-IDF), PyPDF
+- **Frontend**: Vanilla HTML5, CSS3 (Modern Glassmorphism UI, Responsive Dashboard), Modern JavaScript
+- **Reporting**: OpenPyXL (`.xlsx` generation)
 
 ---
 
-## 📐 Mathematical Formulas
-
-### 1. Total Course Outcome (CO) Attainment
-Total attainment for each Course Outcome is calculated as the weighted sum of University Result and Continuous Internal Evaluation (CCE):
-
-$$\text{Total CO Attainment} = (a \times 0.6) + (b \times 0.4)$$
-
-Where:
-- **$a$**: CO Attainment Level through University Result (displays `⚠️` alert if pending/0.0)
-- **$b$**: CO Attainment Level through Internal Assessment-CCE
-
-### 2. Program Outcome (PO / PSO) Attainment
-The final attainment for each Program Outcome (PO1–PO11, PSO1–PSO3) is computed using weighted mapping levels:
-
-$$\text{PO Attainment} = \frac{\sum_{i=1}^{N} \Big(\text{CO Attainment}_i \times \text{Mapping Level}_i\Big)}{\sum_{i=1}^{N} \text{Mapping Level}_i}$$
-
-Where:
-- $\text{Mapping Level}_i \in \{1, 2, 3\}$ (Level 0 / no relation is excluded from denominator)
-- If a PO has no mapped COs ($\sum \text{Mapping Level} = 0$), attainment is marked as `—`.
-
----
-
-## 🏷️ Mapping Levels Definition
-
-| Level | Meaning | Description |
-|:---:|:---:|:---|
-| **3** | **Strong Relationship** | Direct, core alignment between CO activities and the PO requirements. |
-| **2** | **Moderate Relationship** | Substantial support, partial coverage, or prerequisite skill for the PO. |
-| **1** | **Weak Relationship** | Peripheral or indirect relationship. |
-| **0 (`—`)** | **No Relation** | No meaningful semantic or educational relationship. |
-
----
-
-## 🧰 Technology Stack
-
-- **Backend**: Python 3.9+, FastAPI, SQLAlchemy ORM, Pydantic v2, Uvicorn
-- **Database**: MySQL Server
-- **AI & NLP**: 
-  - Dense Embeddings: `sentence-transformers` (`all-MiniLM-L6-v2`) / scikit-learn TF-IDF fallback
-  - Large Language Model: `Google Gemini 3.6 Flash` via Google GenAI API
-- **Evaluation**: Scikit-Learn (Macro Precision, Recall, F1, Confusion Matrix)
-- **Excel Processing**: OpenPyXL
-- **Frontend**: Responsive Single-Page Application (HTML5, Vanilla CSS3 with Dark Theme, Vanilla JavaScript)
-
----
-
-## 📂 Project Structure
-
-```
-Attainment-Calculation/
-├── main.py                     # FastAPI entry point & app lifecycle
-├── database.py                 # SQLAlchemy database engine & session
-├── models.py                   # SQLAlchemy ORM models (Subjects, COs, POs, Mappings)
-├── schemas.py                  # Pydantic schemas for request/response validation
-├── requirements.txt            # Python dependencies
-├── .env.example                # Sample environment variables
-│
-├── ai/                         # Core AI Pipeline
-│   ├── preprocessor.py         # Text normalization & Bloom's verb extraction
-│   ├── embeddings.py           # Sentence-transformers & cosine similarity computation
-│   ├── mapper.py               # Hybrid mapping orchestrator
-│   ├── llm_reasoner.py         # Gemini 3.6 Flash & semantic fallback engine
-│   ├── validator.py            # AI output quality & constraint checker
-│   └── evaluator.py            # Accuracy, F1, Confusion Matrix metrics
-│
-├── routers/                    # FastAPI REST API Endpoints
-│   ├── subjects.py             # Subject, CO, PO, PSO CRUD & attainment routes
-│   ├── mapping.py              # Mapping generation, review & evaluation routes
-│   └── excel.py                # Reference Excel upload & evaluation report export
-│
-├── services/                   # Business Logic
-│   ├── mapping_service.py      # Pipeline coordination & database synchronization
-│   ├── excel_parser.py         # Parser for faculty reference workbooks
-│   └── excel_exporter.py       # Exporter for evaluation & attainment sheets
-│
-├── frontend/                   # UI Assets
-│   ├── templates/index.html    # Single-page application interface
-│   └── static/
-│       ├── style.css           # Modern dark-themed CSS system
-│       └── app.js              # State management & dynamic matrix calculator
-│
-├── sample_data/                # Sample reference workbooks
-│   └── reference_mapping.xlsx  # Sample ground truth mapping for testing
-└── tests/                      # Automated Test Suite (52 unit tests)
-```
-
----
-
-## 🚀 Setup & Installation
+## 🚀 Quick Start
 
 ### 1. Prerequisites
-- Python 3.9 or higher
-- MySQL Server (running locally or remotely)
-- Google Gemini API Key ([Get one here](https://aistudio.google.com/))
+- Python 3.10 or higher
+- Git
 
-### 2. Clone the Repository
+### 2. Setup Virtual Environment
 ```bash
-git clone https://github.com/Aditya-d25/Attainment-Calculation.git
-cd Attainment-Calculation
-```
-
-### 3. Setup Virtual Environment
-```bash
-python3 -m venv venv
-source venv/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 4. Database Setup
-Create MySQL database and user:
-```sql
-CREATE DATABASE co_po_attainment;
-CREATE USER 'attainment'@'localhost' IDENTIFIED BY '1234';
-GRANT ALL PRIVILEGES ON co_po_attainment.* TO 'attainment'@'localhost';
-FLUSH PRIVILEGES;
-```
-
-### 5. Configure Environment Variables
-Copy `.env.example` to `.env`:
-```bash
-cp .env.example .env
-```
-Edit `.env` with your settings:
+### 3. Environment Configuration
+Create a `.env` file in the project root (or copy `.env.example`):
 ```env
-# Database
-DATABASE_URL=mysql+pymysql://attainment:1234@localhost:3306/co_po_attainment
-
-# LLM Configuration
-LLM_PROVIDER=gemini
-LLM_API_KEY=your_google_gemini_api_key
-LLM_MODEL=gemini-3.6-flash
-
-# Embedding Model
-EMBEDDING_MODEL=all-MiniLM-L6-v2
-
-# Mock mode (set to true to run offline without API key)
+DATABASE_URL=sqlite:///./test.db
+GEMINI_API_KEY=your_gemini_api_key_here
 MOCK_MODE=false
 ```
+*Note: If `GEMINI_API_KEY` is not provided or quota is exceeded, the system automatically uses the fallback accreditation rule engine.*
 
----
-
-## 🖥️ Running the Application
-
-Start the FastAPI server:
+### 4. Run Application
 ```bash
-source venv/bin/activate
 uvicorn main:app --reload
 ```
-Open your browser and navigate to:
-**`http://127.0.0.1:8000`**
+Open your browser and navigate to **`http://127.0.0.1:8000`**.
 
 ---
 
-## 🧪 Testing
+## 📋 Faculty Workflow
 
-### Automated Unit Tests
-The repository includes a comprehensive 52-test test suite covering preprocessing, embeddings, validators, parsers, and evaluation metrics:
+1. **Select or Import Framework**: Choose an existing Programme Framework or import a syllabus PDF to automatically extract POs, PSOs, and Courses.
+2. **Add / Review Course Outcomes**: View extracted COs for a course or manually add measurable outcomes.
+3. **Generate Mapping Matrix**: Click **Generate Matrix**. The hybrid AI engine analyzes CO–PO/PSO alignment.
+4. **Inspect & Adjust**:
+   - Click a matrix cell to inspect AI reasoning, semantic similarity, and confidence score.
+   - Edit cell value (0 to 3) to overwrite level and provide faculty notes.
+5. **Export Report**: Download the complete `.xlsx` outcome mapping report.
 
-```bash
-source venv/bin/activate
+---
 
-# Run all unit tests
-python -m pytest tests/ -v -k "not slow"
+## 📐 Mapping Scale Reference
 
-# Run all tests including model downloads
-python -m pytest tests/ -v
+| Level | Contribution | Description |
+| :---: | :--- | :--- |
+| **3** | **High / Direct** | Strong direct alignment with Bloom's taxonomy verbs and learning outcomes |
+| **2** | **Moderate** | Meaningful contribution to outcome achievement |
+| **1** | **Low / Indirect** | Indirect or supporting relationship |
+| **0** | **None** | No meaningful relationship |
+
+---
+
+## 📂 Project Architecture
+
+```
+├── main.py                   # FastAPI application entrypoint & static mounting
+├── models.py                 # SQLAlchemy ORM database models
+├── schemas.py                # Pydantic schemas for API request/response validation
+├── database.py               # Database engine & session configuration
+├── ai/
+│   ├── mapper.py             # Hybrid AI mapping coordinator pipeline
+│   ├── llm_reasoner.py       # Gemini LLM integration with rate-limit handling & retry backoff
+│   └── validator.py          # Matrix mapping validation rules
+├── routers/
+│   ├── frameworks.py         # Programme Framework API endpoints
+│   ├── subjects.py           # Subject & CO management API endpoints
+│   ├── mapping.py            # AI Matrix generation & cell review endpoints
+│   ├── pdf.py                # PDF syllabus upload & parsing endpoints
+│   └── excel.py              # XLSX report export endpoints
+├── services/
+│   ├── pdf_parser.py         # Regex & PyPDF parser for university syllabi (SPPU, AICTE, NEP)
+│   └── mapping_service.py    # Business logic for mapping generation & persistent storage
+├── frontend/
+│   ├── templates/index.html  # Main single-page application dashboard
+│   └── static/
+│       ├── app.js            # Interactive UI logic & state management
+│       └── style.css         # Glassmorphism styling system & layout
+└── tests/                    # Pytest unit & integration test suites
 ```
 
 ---
 
-## 📖 Step-by-Step Usage Guide
+## 🧪 Running Tests
 
-1. **Setup Tab**:
-   - Create a Subject (e.g., Course Code `CS206`, Course Name `Data Structures`).
-   - Add Course Outcomes (COs) and input their initial University Result $(a)$ and Internal Assessment $(b)$ levels.
-   - Click **Load NBA Standard POs** to populate PO1 to PO11.
-   - Add Program Specific Outcomes (PSOs) or click **Load Default PSOs**.
-2. **AI Mapping Tab**:
-   - Choose mapping method: **Hybrid (Recommended)**, **Embedding Only**, or **LLM Only**.
-   - Click **Generate CO-PO Mapping**.
-   - The interactive matrix renders with:
-     - University Result $(a)$ & Internal Assessment $(b)$
-     - Automatically computed **Total CO Attainment**
-     - AI mapping levels (1, 2, 3, or `—`)
-     - Live-calculated **PO / PSO Attainment** footer row.
-   - Edit any $(a)$ or $(b)$ value directly in the matrix table cells to watch total and PO attainments recalculate dynamically!
-   - Click on any matrix cell to inspect the side panel detailing similarity scores, Bloom's concepts, and Gemini reasoning.
-3. **Review Tab**:
-   - Approve, adjust, or reject individual AI-suggested mappings.
-4. **Evaluation Tab**:
-   - Upload your faculty reference Excel file in Setup.
-   - Click **Run Evaluation** to benchmark Accuracy, Precision, Recall, Macro-F1, and Confusion Matrix.
-5. **Export Tab**:
-   - Export evaluation and attainment matrices into an Excel workbook.
+To run the automated test suite:
+```bash
+pytest tests/
+```
 
 ---
 
 ## 📄 License
 
-Academic Project — BE Final Year (2024–25).
-Developed for automated Outcome-Based Education (OBE) and NBA accreditation workflow.
+This project is licensed under the MIT License - see the LICENSE file for details.

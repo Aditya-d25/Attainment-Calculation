@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from database import SessionLocal
-from models import Document, Subject, CourseOutcome, ProgramOutcome, ProgramSpecificOutcome
+from models import Document, Subject, CourseOutcome, ProgramOutcome, ProgramSpecificOutcome, FrameworkOutcome
 from services.excel_parser import parse_reference_excel
 from services.excel_exporter import export_mapping_report
 from services.mapping_service import (
@@ -118,20 +118,21 @@ def export_mapping_excel(
     if not mappings_list:
         raise HTTPException(status_code=400, detail="No mappings found for this subject")
 
-    # Get POs and PSOs
-    pos = db.query(ProgramOutcome).filter(
-        ProgramOutcome.subject_id == subject_id
-    ).order_by(ProgramOutcome.po_code).all()
-    psos = db.query(ProgramSpecificOutcome).filter(
-        ProgramSpecificOutcome.subject_id == subject_id
-    ).order_by(ProgramSpecificOutcome.pso_code).all()
+    # Use the stream-wide catalogue for framework-backed courses.
+    if subject.framework_id:
+        rows = db.query(FrameworkOutcome).filter(FrameworkOutcome.framework_id == subject.framework_id).all()
+        po_codes = [row.outcome_code for row in rows if row.outcome_type == "PO"]
+        pso_codes = [row.outcome_code for row in rows if row.outcome_type == "PSO"]
+    else:
+        pos = db.query(ProgramOutcome).filter(ProgramOutcome.subject_id == subject_id).order_by(ProgramOutcome.po_code).all()
+        psos = db.query(ProgramSpecificOutcome).filter(ProgramSpecificOutcome.subject_id == subject_id).order_by(ProgramSpecificOutcome.pso_code).all()
+        po_codes = [po.po_code for po in pos]
+        pso_codes = [pso.pso_code for pso in psos]
     cos = db.query(CourseOutcome).filter(
         CourseOutcome.subject_id == subject_id
     ).order_by(CourseOutcome.co_code).all()
 
     co_codes = [co.co_code for co in cos]
-    po_codes = [po.po_code for po in pos]
-    pso_codes = [pso.pso_code for pso in psos]
 
     # Convert to export format
     ai_mappings = {}

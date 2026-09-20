@@ -19,6 +19,10 @@ htmlcov/
 # Local uploads and test outputs
 uploads/*
 !uploads/.gitkeep
+*.db
+test.db
+scratch/
+
 
 # OS generated files
 .DS_Store

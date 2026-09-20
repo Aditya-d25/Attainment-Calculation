@@ -33,6 +33,7 @@ class SubjectCreate(BaseModel):
     department: Optional[str] = None
     theory_enabled: bool = True
     description: Optional[str] = None
+    framework_id: Optional[int] = None
 
 
 class SubjectResponse(BaseModel):
@@ -44,6 +45,42 @@ class SubjectResponse(BaseModel):
     department: Optional[str]
     theory_enabled: bool
     description: Optional[str]
+    framework_id: Optional[int] = None
+    co_count: Optional[int] = 0
+
+    class Config:
+        from_attributes = True
+
+
+# -------------------------
+# Programme framework schemas
+# -------------------------
+
+class OutcomeFrameworkCreate(BaseModel):
+    name: str
+    department: Optional[str] = None
+    description: Optional[str] = None
+
+
+class OutcomeFrameworkResponse(BaseModel):
+    id: int
+    name: str
+    department: Optional[str] = None
+    description: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class FrameworkOutcomeCreate(BaseModel):
+    outcome_code: str
+    outcome_type: str = "PO"
+    description: str
+
+
+class FrameworkOutcomeResponse(FrameworkOutcomeCreate):
+    id: int
+    framework_id: int
 
     class Config:
         from_attributes = True
@@ -61,6 +98,7 @@ class CourseOutcomeCreate(BaseModel):
 
 
 class CourseOutcomeUpdate(BaseModel):
+    co_code: Optional[str] = None
     univ_attainment: Optional[float] = None
     internal_attainment: Optional[float] = None
     description: Optional[str] = None

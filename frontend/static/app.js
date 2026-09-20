@@ -1,922 +1,808 @@
-/**
- * AI CO-PO Mapping Agent — Frontend Application
- *
- * Single-page app with tabbed navigation managing the complete
- * CO-PO mapping workflow: setup, generation, review, evaluation, export.
- */
-
-// ---- State ----
-const state = {
-    currentTab: 'setup',
-    subjectId: null,
-    subjects: [],
-    cos: [],
-    pos: [],
-    psos: [],
-    mappings: [],
-    evaluations: [],
-    config: {},
+const S = {
+  frameworks: [],
+  frameworkId: null,
+  courses: [],
+  courseId: null,
+  cos: [],
+  pos: [],
+  mappings: [],
+  editingOutcome: null, // { mode: 'add'|'edit', type: 'CO'|'PO', item: Object }
+  editingCell: null
 };
 
-// ---- API Helpers ----
-const API = {
-    async get(url) {
-        const res = await fetch(url);
-        if (!res.ok) {
-            const err = await res.json().catch(() => ({ detail: res.statusText }));
-            throw new Error(err.detail || 'Request failed');
-        }
-        return res.json();
-    },
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c]));
 
-    async post(url, data) {
-        const res = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
-        });
-        if (!res.ok) {
-            const err = await res.json().catch(() => ({ detail: res.statusText }));
-            throw new Error(err.detail || 'Request failed');
-        }
-        return res.json();
-    },
-
-    async put(url, data) {
-        const res = await fetch(url, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
-        });
-        if (!res.ok) {
-            const err = await res.json().catch(() => ({ detail: res.statusText }));
-            throw new Error(err.detail || 'Request failed');
-        }
-        return res.json();
-    },
-
-    async upload(url, formData) {
-        const res = await fetch(url, { method: 'POST', body: formData });
-        if (!res.ok) {
-            const err = await res.json().catch(() => ({ detail: res.statusText }));
-            throw new Error(err.detail || 'Upload failed');
-        }
-        return res.json();
-    },
-
-    async del(url) {
-        const res = await fetch(url, { method: 'DELETE' });
-        if (!res.ok) {
-            const err = await res.json().catch(() => ({ detail: res.statusText }));
-            throw new Error(err.detail || 'Delete failed');
-        }
-        return res.json();
-    },
-};
-
-// ---- Toast Notifications ----
-function showToast(message, type = 'info') {
-    const container = document.getElementById('toast-container');
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.textContent = message;
-    container.appendChild(toast);
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateX(40px)';
-        toast.style.transition = 'all 0.3s ease';
-        setTimeout(() => toast.remove(), 300);
-    }, 3500);
+async function api(url, opts = {}) {
+  const isFormData = opts.body instanceof FormData;
+  const headers = isFormData ? { ...opts.headers } : { 'Content-Type': 'application/json', ...opts.headers };
+  
+  const r = await fetch(url, { ...opts, headers });
+  if (!r.ok) {
+    const x = await r.json().catch(() => ({ detail: r.statusText }));
+    throw new Error(x.detail || 'Request failed');
+  }
+  return r.json();
 }
 
-// ---- Loading ----
-function showLoading(text = 'Processing...') {
-    const overlay = document.getElementById('loading-overlay');
-    document.getElementById('loading-text').textContent = text;
-    overlay.classList.add('active');
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
 }
 
-function hideLoading() {
-    document.getElementById('loading-overlay').classList.remove('active');
+function updateStepper(step) {
+  const s1 = $('step-1-indicator');
+  const s2 = $('step-2-indicator');
+  const s3 = $('step-3-indicator');
+
+  [s1, s2, s3].forEach(s => {
+    if (s) s.classList.remove('active', 'completed');
+  });
+
+  if (step === 1) {
+    if (s1) s1.classList.add('active');
+  } else if (step === 2) {
+    if (s1) s1.classList.add('completed');
+    if (s2) s2.classList.add('active');
+  } else if (step === 3) {
+    if (s1) s1.classList.add('completed');
+    if (s2) s2.classList.add('completed');
+    if (s3) s3.classList.add('active');
+  }
 }
 
-// ---- Tab Navigation ----
 function switchTab(tabId) {
-    state.currentTab = tabId;
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.tab === tabId);
-    });
-    document.querySelectorAll('.tab-content').forEach(content => {
-        content.classList.toggle('active', content.id === `tab-${tabId}`);
-    });
+  document.querySelectorAll('.tabs button').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === tabId);
+  });
+  document.querySelectorAll('.page').forEach(p => {
+    p.classList.toggle('active', p.id === tabId);
+  });
+
+  if (tabId === 'outcomes-tab') {
+    updateStepper(2);
+  } else if (tabId === 'matrix-tab') {
+    updateStepper(3);
+  }
 }
 
-// ---- Initialization ----
-document.addEventListener('DOMContentLoaded', async () => {
-    // Tab click handlers
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+function sortOutcomes(arr) {
+  return [...arr].sort((a, b) => {
+    const codeA = a.outcome_code || a.po_code || a.co_code || '';
+    const codeB = b.outcome_code || b.po_code || b.co_code || '';
+    return codeA.localeCompare(codeB, undefined, { numeric: true });
+  });
+}
+
+// -------------------------------------------------------------
+// INITIALIZATION & SYLLABUS PDF UPLOAD
+// -------------------------------------------------------------
+
+function init() {
+  // Tab setup
+  document.querySelectorAll('.tabs button').forEach(btn => {
+    btn.onclick = () => switchTab(btn.dataset.tab);
+  });
+
+  // Setup Drag & Drop File Input immediately
+  setupFileInput();
+
+  // Attach Event Handlers immediately & synchronously
+  const uploadForm = $('pdf-upload-form');
+  if (uploadForm) {
+    uploadForm.onsubmit = handlePDFUpload;
+  }
+  const uploadBtn = $('upload-btn');
+  if (uploadBtn) {
+    uploadBtn.onclick = handlePDFUpload;
+  }
+  const courseSelect = $('course-select');
+  if (courseSelect) {
+    courseSelect.onchange = handleCourseSelectChange;
+  }
+
+  $('add-co-btn').onclick = () => openOutcomeModal('add', 'CO');
+  $('add-po-btn').onclick = () => openOutcomeModal('add', 'PO');
+  $('outcome-modal-form').onsubmit = saveOutcomeModal;
+  $('outcome-modal-close').onclick = () => $('outcome-modal').classList.remove('open');
+  if ($('outcome-modal-cancel')) {
+    $('outcome-modal-cancel').onclick = () => $('outcome-modal').classList.remove('open');
+  }
+
+  // Workflow Progression Buttons
+  $('proceed-matrix-btn').onclick = proceedToMatrixGeneration;
+  $('proceed-matrix-btn-bottom').onclick = proceedToMatrixGeneration;
+  if ($('back-outcomes-btn')) {
+    $('back-outcomes-btn').onclick = () => switchTab('outcomes-tab');
+  }
+
+  $('generate-btn').onclick = generateMapping;
+  $('export-button').onclick = exportExcel;
+
+  $('drawer-close').onclick = () => $('drawer').classList.remove('open');
+  $('edit-close').onclick = () => $('edit-modal').classList.remove('open');
+  if ($('edit-cancel')) {
+    $('edit-cancel').onclick = () => $('edit-modal').classList.remove('open');
+  }
+  $('edit-form').onsubmit = saveCellOverride;
+
+  // Async load initial data in background
+  loadInitialData();
+}
+
+async function loadInitialData() {
+  // Health / Config check
+  try {
+    const cfg = await api('/api/mapping/config/current');
+    $('mode-badge').textContent = cfg.mock_mode ? 'Reasoning Engine (Mock Mode)' : 'AI Connected (Gemini)';
+  } catch {
+    $('mode-badge').textContent = 'Local Workspace';
+  }
+
+  // Load Frameworks & Courses
+  await fetchFrameworks();
+}
+
+function setupFileInput() {
+  const fileInput = $('pdf-file-input');
+  const fileLabel = $('file-label');
+  const dropArea = $('drop-area');
+
+  if (!fileInput || !fileLabel || !dropArea) return;
+
+  fileInput.onchange = () => {
+    if (fileInput.files && fileInput.files.length > 0) {
+      S.selectedFile = fileInput.files[0];
+      fileLabel.textContent = `Selected: ${fileInput.files[0].name}`;
+    } else {
+      S.selectedFile = null;
+      fileLabel.textContent = 'Click or drag & drop syllabus PDF here';
+    }
+  };
+
+  ['dragenter', 'dragover'].forEach(eventName => {
+    dropArea.addEventListener(eventName, e => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropArea.classList.add('dragover');
+    }, false);
+  });
+
+  ['dragleave', 'drop'].forEach(eventName => {
+    dropArea.addEventListener(eventName, e => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropArea.classList.remove('dragover');
+    }, false);
+  });
+
+  dropArea.addEventListener('drop', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    const dt = e.dataTransfer;
+    if (dt && dt.files && dt.files.length > 0) {
+      S.selectedFile = dt.files[0];
+      try { fileInput.files = dt.files; } catch {}
+      fileLabel.textContent = `Selected: ${S.selectedFile.name}`;
+    }
+  });
+}
+
+async function handlePDFUpload(e) {
+  if (e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  const fileInput = $('pdf-file-input');
+  const file = S.selectedFile || (fileInput && fileInput.files && fileInput.files[0]);
+
+  if (!file) {
+    toast('Please select or drop a syllabus PDF file first');
+    return;
+  }
+
+  const uploadBtn = $('upload-btn');
+  const statusDiv = $('upload-status');
+  
+  if (uploadBtn) {
+    uploadBtn.disabled = true;
+    uploadBtn.innerHTML = '<span class="spinner-inline"></span> Extracting Outcomes...';
+  }
+  if (statusDiv) {
+    statusDiv.className = 'upload-status';
+    statusDiv.innerHTML = '<span class="spinner-inline"></span> Parsing syllabus PDF & extracting outcomes...';
+  }
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const res = await api('/api/pdf/upload', {
+      method: 'POST',
+      body: formData
     });
 
-    // Load config
-    try {
-        state.config = await API.get('/api/mapping/config/current');
-        updateConfigDisplay();
-    } catch (e) {
-        console.warn('Could not load config:', e);
+    if (statusDiv) {
+      statusDiv.className = 'upload-status success';
+      statusDiv.textContent = `✓ ${res.message} (${res.framework.po_count} POs, ${res.courses.length} Courses)`;
+    }
+    toast(`Syllabus extracted: ${res.framework.po_count} POs & ${res.courses.length} courses!`);
+
+    // Reload frameworks & select the new framework
+    S.frameworks = await api('/api/frameworks');
+    if (res.framework && res.framework.id) {
+      await selectFramework(res.framework.id);
+    } else {
+      await fetchFrameworks();
     }
 
-    // Load existing subjects
-    await loadSubjects();
+    updateStepper(2);
 
-    // Setup form handlers
-    setupFormHandlers();
-});
-
-function updateConfigDisplay() {
-    const badge = document.getElementById('mode-badge');
-    if (badge) {
-        badge.textContent = state.config.mock_mode ? '🧪 Mock Mode' : `🤖 ${state.config.llm_provider}`;
+  } catch (err) {
+    console.error('PDF upload error:', err);
+    if (statusDiv) {
+      statusDiv.className = 'upload-status error';
+      statusDiv.textContent = `Error: ${err.message}`;
     }
-}
-
-// =============================================
-// SETUP TAB
-// =============================================
-
-async function loadSubjects() {
-    try {
-        state.subjects = await API.get('/api/subjects');
-        renderSubjectList();
-    } catch (e) {
-        console.error('Failed to load subjects:', e);
+    toast(`Failed to process PDF: ${err.message}`);
+  } finally {
+    if (uploadBtn) {
+      uploadBtn.disabled = false;
+      uploadBtn.textContent = 'Extract POs & COs from PDF';
     }
+  }
 }
+window.handlePDFUpload = handlePDFUpload;
 
-function renderSubjectList() {
-    const container = document.getElementById('subject-list');
-    if (!state.subjects.length) {
-        container.innerHTML = '<p class="text-muted">No subjects yet. Create one to get started.</p>';
-        return;
+// -------------------------------------------------------------
+// FRAMEWORK & COURSE MANAGEMENT
+// -------------------------------------------------------------
+
+async function fetchFrameworks(selectFrameworkId = null) {
+  try {
+    S.frameworks = await api('/api/frameworks');
+    if (!S.frameworks || S.frameworks.length === 0) {
+      $('current-framework-name').textContent = 'Framework: Upload Syllabus PDF to extract framework';
+      $('current-framework-details').textContent = 'Upload syllabus PDF above to automatically populate courses & outcomes.';
+      populateCourseDropdown();
+      return;
     }
-    container.innerHTML = state.subjects.map(s => `
-        <li>
-            <span class="item-code">${s.course_code}</span>
-            <span class="item-desc">${s.course_name}</span>
-            <div class="item-actions">
-                <button class="btn btn-sm btn-primary" onclick="selectSubject(${s.id})">Select</button>
-                <button class="btn btn-sm btn-danger" onclick="deleteSubject(${s.id})">✕</button>
-            </div>
-        </li>
-    `).join('');
-}
 
-function setupFormHandlers() {
-    // Create subject
-    document.getElementById('form-subject').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const data = {
-            course_code: document.getElementById('course-code').value,
-            course_name: document.getElementById('course-name').value,
-            semester: document.getElementById('semester').value || null,
-            academic_year: document.getElementById('academic-year').value || null,
-            department: document.getElementById('department').value || null,
-        };
-        try {
-            const result = await API.post('/api/subjects', data);
-            showToast('Subject created!', 'success');
-            await loadSubjects();
-            selectSubject(result.id);
-            e.target.reset();
-        } catch (err) {
-            showToast(err.message, 'error');
-        }
-    });
-
-    // Add CO
-    document.getElementById('form-add-co').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        if (!state.subjectId) { showToast('Select a subject first', 'warning'); return; }
-        const data = {
-            co_code: document.getElementById('co-code').value,
-            description: document.getElementById('co-desc').value,
-            univ_attainment: parseFloat(document.getElementById('co-univ-attainment').value) || 0.0,
-            internal_attainment: parseFloat(document.getElementById('co-internal-attainment').value) || 0.0,
-        };
-        try {
-            await API.post(`/api/subjects/${state.subjectId}/cos`, data);
-            showToast('CO added!', 'success');
-            await loadSubjectData();
-            e.target.reset();
-            document.getElementById('co-univ-attainment').value = '0.00';
-            document.getElementById('co-internal-attainment').value = '3.00';
-        } catch (err) {
-            showToast(err.message, 'error');
-        }
-    });
-
-    // Add PO
-    document.getElementById('form-add-po').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        if (!state.subjectId) { showToast('Select a subject first', 'warning'); return; }
-        const data = {
-            po_code: document.getElementById('po-code').value,
-            description: document.getElementById('po-desc').value,
-        };
-        try {
-            await API.post(`/api/subjects/${state.subjectId}/pos`, data);
-            showToast('PO added!', 'success');
-            await loadSubjectData();
-            e.target.reset();
-        } catch (err) {
-            showToast(err.message, 'error');
-        }
-    });
-
-    // Add PSO
-    document.getElementById('form-add-pso').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        if (!state.subjectId) { showToast('Select a subject first', 'warning'); return; }
-        const data = {
-            pso_code: document.getElementById('pso-code').value,
-            description: document.getElementById('pso-desc').value,
-        };
-        try {
-            await API.post(`/api/subjects/${state.subjectId}/psos`, data);
-            showToast('PSO added!', 'success');
-            await loadSubjectData();
-            e.target.reset();
-        } catch (err) {
-            showToast(err.message, 'error');
-        }
-    });
-
-    // Excel upload
-    const uploadArea = document.getElementById('excel-upload-area');
-    const fileInput = document.getElementById('excel-file-input');
-
-    uploadArea.addEventListener('click', () => fileInput.click());
-    uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.classList.add('dragover'); });
-    uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
-    uploadArea.addEventListener('drop', (e) => {
-        e.preventDefault();
-        uploadArea.classList.remove('dragover');
-        if (e.dataTransfer.files.length) handleExcelUpload(e.dataTransfer.files[0]);
-    });
-    fileInput.addEventListener('change', (e) => {
-        if (e.target.files.length) handleExcelUpload(e.target.files[0]);
-    });
-}
-
-async function selectSubject(id) {
-    state.subjectId = id;
-    const subject = state.subjects.find(s => s.id === id);
-    document.getElementById('selected-subject-name').textContent =
-        subject ? `${subject.course_code} — ${subject.course_name}` : '';
-    document.getElementById('selected-subject-panel').classList.remove('hidden');
-    await loadSubjectData();
-    showToast(`Selected: ${subject.course_code}`, 'info');
-}
-
-async function deleteSubject(id) {
-    if (!confirm('Delete this subject and all its data?')) return;
-    try {
-        await API.del(`/api/subjects/${id}`);
-        if (state.subjectId === id) {
-            state.subjectId = null;
-            document.getElementById('selected-subject-panel').classList.add('hidden');
-        }
-        showToast('Subject deleted', 'info');
-        await loadSubjects();
-    } catch (err) {
-        showToast(err.message, 'error');
+    // Auto-select framework
+    let targetId = selectFrameworkId;
+    if (!targetId) {
+      // Find the framework that has subjects attached
+      const allSubjects = await api('/api/subjects').catch(() => []);
+      const fwWithSubs = S.frameworks.find(f => allSubjects.some(s => Number(s.framework_id) === Number(f.id)));
+      if (fwWithSubs) {
+        targetId = fwWithSubs.id;
+      } else {
+        const sorted = [...S.frameworks].sort((a, b) => Number(b.id) - Number(a.id));
+        targetId = sorted[0].id;
+      }
     }
-}
 
-async function loadSubjectData() {
-    if (!state.subjectId) return;
-    try {
-        const [cos, pos, psos] = await Promise.all([
-            API.get(`/api/subjects/${state.subjectId}/cos`),
-            API.get(`/api/subjects/${state.subjectId}/pos`),
-            API.get(`/api/subjects/${state.subjectId}/psos`),
-        ]);
-        state.cos = cos;
-        state.pos = pos;
-        state.psos = psos;
-        renderCOList();
-        renderPOList();
-        renderPSOList();
-    } catch (err) {
-        showToast('Failed to load subject data', 'error');
+    if (targetId) {
+      await selectFramework(targetId);
     }
+  } catch (err) {
+    console.error('Failed to fetch frameworks:', err);
+  }
 }
 
-function renderCOList() {
-    const el = document.getElementById('co-list');
-    if (!state.cos.length) {
-        el.innerHTML = '<p class="text-muted">No COs added yet.</p>';
-        return;
+async function selectFramework(id) {
+  S.frameworkId = id;
+  const fw = S.frameworks.find(f => Number(f.id) === Number(id));
+  if (fw) {
+    $('current-framework-name').textContent = `Framework: ${fw.name}`;
+    $('current-framework-details').textContent = `Department: ${fw.department || 'Engineering'} | Shared Outcomes Framework`;
+  }
+
+  // Fetch POs/PSOs for this framework
+  try {
+    S.pos = await api(`/api/frameworks/${id}/outcomes`);
+    renderPOs();
+  } catch (err) {
+    console.error('Failed to fetch framework outcomes:', err);
+  }
+
+  // Fetch Courses attached to this framework
+  try {
+    const allSubjects = await api('/api/subjects');
+    S.courses = allSubjects.filter(s => s.framework_id && Number(s.framework_id) === Number(id));
+    if (S.courses.length === 0 && allSubjects.length > 0) {
+      S.courses = allSubjects;
     }
-    el.innerHTML = state.cos.map(co => `
-        <li>
-            <span class="item-code">${co.co_code}</span>
-            <span class="item-desc">${co.description} <small style="color:var(--text-muted); margin-left:8px; font-weight:500;">(Univ: ${(co.univ_attainment ?? 0).toFixed(2)}, Internal: ${(co.internal_attainment ?? 0).toFixed(2)})</small></span>
-            <div class="item-actions">
-                <button class="btn btn-sm btn-danger" onclick="deleteCO(${co.id})">✕</button>
-            </div>
-        </li>
-    `).join('');
+    populateCourseDropdown();
+  } catch (err) {
+    console.error('Failed to fetch courses:', err);
+  }
 }
 
-async function updateCOAttainment(coId, field, value) {
-    const numVal = parseFloat(value) || 0.0;
-    try {
-        await API.put(`/api/subjects/${state.subjectId}/cos/${coId}`, {
-            [field]: numVal,
+function populateCourseDropdown() {
+  const select = $('course-select');
+  if (!S.courses || S.courses.length === 0) {
+    select.innerHTML = '<option value="">-- No Courses Extracted Yet --</option>';
+    return;
+  }
+
+  select.innerHTML = '<option value="">-- Select Course from List --</option>' +
+    S.courses.map(c => {
+      const coText = (c.co_count !== undefined) ? ` (${c.co_count} COs)` : '';
+      return `<option value="${c.id}">[${esc(c.course_code)}] ${esc(c.course_name)}${coText}</option>`;
+    }).join('');
+
+  if (S.courseId && S.courses.some(c => Number(c.id) === Number(S.courseId))) {
+    select.value = S.courseId;
+  } else if (S.courses.length > 0) {
+    const targetCourse = S.courses.find(c => (c.co_count || 0) > 0) || S.courses[0];
+    select.value = targetCourse.id;
+    selectCourse(targetCourse.id);
+  }
+}
+
+async function handleCourseSelectChange(e) {
+  const courseId = parseInt(e.target.value, 10);
+  if (courseId) {
+    await selectCourse(courseId);
+  } else {
+    S.courseId = null;
+    S.cos = [];
+    S.mappings = [];
+    renderCOs();
+    renderMatrix();
+    updateOutcomesSummary();
+  }
+}
+
+async function selectCourse(courseId) {
+  S.courseId = courseId;
+  $('course-select').value = courseId;
+  const course = S.courses.find(c => c.id === courseId);
+
+  if (course) {
+    $('selected-course-banner-title').textContent = `${course.course_code}: ${course.course_name}`;
+    $('selected-course-banner-sub').textContent = `Review and edit the extracted outcomes below. When ready, click Proceed to generate the explainable CO-PO matrix.`;
+    $('co-card-title').textContent = `Course Outcomes (${course.course_code})`;
+    $('matrix-course-title').textContent = `Mapping Matrix: ${course.course_code} - ${course.course_name}`;
+
+    // If course belongs to a specific framework, ensure S.frameworkId is aligned
+    if (course.framework_id && Number(course.framework_id) !== Number(S.frameworkId)) {
+      S.frameworkId = course.framework_id;
+      const fw = S.frameworks.find(f => Number(f.id) === Number(course.framework_id));
+      if (fw) {
+        $('current-framework-name').textContent = `Framework: ${fw.name}`;
+      }
+    }
+  }
+
+  // Fetch COs for selected course
+  try {
+    S.cos = await api(`/api/subjects/${courseId}/cos`);
+    renderCOs();
+  } catch (err) {
+    console.error('Failed to fetch COs:', err);
+    S.cos = [];
+    renderCOs();
+  }
+
+  // Fetch POs for selected course
+  try {
+    if (course && course.framework_id) {
+      S.pos = await api(`/api/frameworks/${course.framework_id}/outcomes`);
+    } else {
+      S.pos = await api(`/api/subjects/${courseId}/pos`);
+    }
+    renderPOs();
+  } catch (err) {
+    console.error('Failed to fetch POs:', err);
+  }
+
+  // Fetch existing Mappings if any
+  try {
+    const mapRes = await api(`/api/mapping/${courseId}`);
+    S.mappings = mapRes.mappings || [];
+    renderMatrix();
+  } catch (err) {
+    S.mappings = [];
+    renderMatrix();
+  }
+
+  updateOutcomesSummary();
+}
+
+function updateOutcomesSummary() {
+  const coCount = S.cos ? S.cos.length : 0;
+  const poCount = S.pos ? S.pos.length : 0;
+
+  $('co-count-badge').textContent = `${coCount} COs`;
+  $('po-count-badge').textContent = `${poCount} POs`;
+
+  const course = S.courses.find(c => c.id === S.courseId);
+  if (course) {
+    course.co_count = coCount;
+    $('footer-status-text').textContent = `Course ready: ${coCount} COs defined against ${poCount} Program Outcomes.`;
+  } else {
+    $('footer-status-text').textContent = 'Select a course to review outcomes.';
+  }
+}
+
+// -------------------------------------------------------------
+// RENDER OUTCOMES LISTS (WITH EDIT & REMOVE BUTTONS)
+// -------------------------------------------------------------
+
+function renderCOs() {
+  const container = $('co-list-container');
+  if (!S.courseId) {
+    container.innerHTML = '<div class="empty-state">Select a course from the list above to view its Course Outcomes.</div>';
+    return;
+  }
+
+  if (S.cos.length === 0) {
+    container.innerHTML = '<div class="empty-state">No Course Outcomes found for this course yet. Click "+ Add CO" to add one.</div>';
+    return;
+  }
+
+  const sorted = sortOutcomes(S.cos);
+  container.innerHTML = sorted.map(co => `
+    <div class="item-row">
+      <div class="item-content">
+        <span class="item-code">${esc(co.co_code)}</span>
+        <span class="item-desc">${esc(co.description)}</span>
+      </div>
+      <div class="item-actions">
+        <button class="btn-icon" onclick="openOutcomeModal('edit', 'CO', ${co.id})">Edit</button>
+        <button class="btn-icon danger" onclick="deleteCO(${co.id})">Remove</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderPOs() {
+  const container = $('po-list-container');
+  if (!S.frameworkId && !S.courseId) {
+    container.innerHTML = '<div class="empty-state">Upload or select a framework to view Program Outcomes.</div>';
+    return;
+  }
+
+  if (S.pos.length === 0) {
+    container.innerHTML = '<div class="empty-state">No Program Outcomes found in this framework. Click "+ Add PO/PSO" to add one.</div>';
+    return;
+  }
+
+  const sorted = sortOutcomes(S.pos);
+  container.innerHTML = sorted.map(po => {
+    const code = po.outcome_code || po.po_code || po.pso_code;
+    return `
+      <div class="item-row">
+        <div class="item-content">
+          <span class="item-code">${esc(code)}</span>
+          <span class="item-desc">${esc(po.description)}</span>
+        </div>
+        <div class="item-actions">
+          <button class="btn-icon" onclick="openOutcomeModal('edit', 'PO', ${po.id})">Edit</button>
+          <button class="btn-icon danger" onclick="deletePO(${po.id})">Remove</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// -------------------------------------------------------------
+// EDIT & REMOVE HANDLERS FOR COs & POs
+// -------------------------------------------------------------
+
+async function deleteCO(id) {
+  if (!confirm('Are you sure you want to remove this Course Outcome?')) return;
+  try {
+    await api(`/api/subjects/${S.courseId}/cos/${id}`, { method: 'DELETE' });
+    toast('Course Outcome removed.');
+    await selectCourse(S.courseId);
+  } catch (err) {
+    toast(`Failed to delete CO: ${err.message}`);
+  }
+}
+
+async function deletePO(id) {
+  if (!confirm('Are you sure you want to remove this Program Outcome?')) return;
+  try {
+    await api(`/api/frameworks/${S.frameworkId}/outcomes/item/${id}`, { method: 'DELETE' });
+    toast('Program Outcome removed.');
+    await selectFramework(S.frameworkId);
+    if (S.courseId) await selectCourse(S.courseId);
+  } catch (err) {
+    toast(`Failed to delete PO: ${err.message}`);
+  }
+}
+
+function openOutcomeModal(mode, type, itemId = null) {
+  if (type === 'CO' && !S.courseId) return toast('Please select a course first');
+  if (type === 'PO' && !S.frameworkId) return toast('Please select or upload a framework first');
+
+  let item = null;
+  if (mode === 'edit') {
+    if (type === 'CO') item = S.cos.find(c => c.id === itemId);
+    if (type === 'PO') item = S.pos.find(p => p.id === itemId);
+  }
+
+  S.editingOutcome = { mode, type, item };
+
+  $('outcome-modal-kicker').textContent = `${mode.toUpperCase()} ${type === 'CO' ? 'COURSE OUTCOME' : 'PROGRAM OUTCOME'}`;
+  $('outcome-modal-title').textContent = mode === 'edit' ? `Edit ${item.co_code || item.outcome_code || item.po_code}` : `New ${type}`;
+
+  $('modal-type-group').style.display = type === 'PO' ? 'block' : 'none';
+  if (type === 'PO') {
+    $('modal-outcome-type').value = item?.outcome_type || 'PO';
+  }
+
+  $('modal-outcome-code').value = item ? (item.co_code || item.outcome_code || item.po_code) : (type === 'CO' ? `CO${S.cos.length + 1}` : `PO${S.pos.length + 1}`);
+  $('modal-outcome-desc').value = item ? item.description : '';
+
+  $('outcome-modal').classList.add('open');
+}
+
+async function saveOutcomeModal(e) {
+  e.preventDefault();
+  const { mode, type, item } = S.editingOutcome;
+  const code = $('modal-outcome-code').value.trim();
+  const desc = $('modal-outcome-desc').value.trim();
+  const oType = $('modal-outcome-type').value;
+
+  if (!code || !desc) return toast('Please provide both code and description');
+
+  try {
+    if (type === 'CO') {
+      if (mode === 'add') {
+        await api(`/api/subjects/${S.courseId}/cos`, {
+          method: 'POST',
+          body: JSON.stringify({ co_code: code, description: desc })
         });
-        const co = state.cos.find(c => c.id === coId);
-        if (co) co[field] = numVal;
-        renderMappingMatrix();
-        showToast('Attainment updated', 'info');
-    } catch (err) {
-        showToast('Failed to update attainment: ' + err.message, 'error');
+        toast('Course Outcome added successfully.');
+      } else {
+        await api(`/api/subjects/${S.courseId}/cos/${item.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ co_code: code, description: desc })
+        });
+        toast('Course Outcome updated.');
+      }
+      await selectCourse(S.courseId);
+
+    } else if (type === 'PO') {
+      if (mode === 'add') {
+        await api(`/api/frameworks/${S.frameworkId}/outcomes/item`, {
+          method: 'POST',
+          body: JSON.stringify({ outcome_code: code, outcome_type: oType, description: desc })
+        });
+        toast('Program Outcome added successfully.');
+      } else {
+        await api(`/api/frameworks/${S.frameworkId}/outcomes/item/${item.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ outcome_code: code, outcome_type: oType, description: desc })
+        });
+        toast('Program Outcome updated.');
+      }
+      await selectFramework(S.frameworkId);
+      if (S.courseId) await selectCourse(S.courseId);
     }
+
+    $('outcome-modal').classList.remove('open');
+  } catch (err) {
+    toast(`Error: ${err.message}`);
+  }
 }
 
-function renderPOList() {
-    const el = document.getElementById('po-list');
-    if (!state.pos.length) {
-        el.innerHTML = '<p class="text-muted">No POs added yet.</p>';
-        return;
-    }
-    el.innerHTML = state.pos.map(po => `
-        <li>
-            <span class="item-code">${po.po_code}</span>
-            <span class="item-desc">${po.description}</span>
-        </li>
-    `).join('');
+// -------------------------------------------------------------
+// WORKFLOW PROGRESSION & MATRIX GENERATION
+// -------------------------------------------------------------
+
+async function proceedToMatrixGeneration() {
+  if (!S.courseId) {
+    return toast('Please select a course first from the list above');
+  }
+  if (!S.cos || S.cos.length === 0) {
+    return toast('This course has no Course Outcomes (COs). Please add at least one CO.');
+  }
+  if (!S.pos || S.pos.length === 0) {
+    return toast('No Program Outcomes (POs) found. Please upload syllabus or add POs.');
+  }
+
+  // Switch to matrix tab
+  switchTab('matrix-tab');
+  updateStepper(3);
+
+  // Generate matrix
+  await generateMapping();
 }
-
-function renderPSOList() {
-    const el = document.getElementById('pso-list');
-    if (!state.psos.length) {
-        el.innerHTML = '<p class="text-muted">No PSOs added yet.</p>';
-        return;
-    }
-    el.innerHTML = state.psos.map(pso => `
-        <li>
-            <span class="item-code">${pso.pso_code}</span>
-            <span class="item-desc">${pso.description}</span>
-        </li>
-    `).join('');
-}
-
-async function deleteCO(coId) {
-    try {
-        await API.del(`/api/subjects/${state.subjectId}/cos/${coId}`);
-        await loadSubjectData();
-    } catch (err) {
-        showToast(err.message, 'error');
-    }
-}
-
-async function handleExcelUpload(file) {
-    if (!state.subjectId) {
-        showToast('Please select a subject first', 'warning');
-        return;
-    }
-    showLoading('Parsing Excel file...');
-    const formData = new FormData();
-    formData.append('file', file);
-    try {
-        const result = await API.upload(`/api/excel/upload-reference/${state.subjectId}`, formData);
-        hideLoading();
-        if (result.status === 'error') {
-            showToast('Parse errors: ' + result.errors.join('; '), 'error');
-        } else {
-            showToast(`Imported ${result.mappings_count} reference mappings from "${result.sheet_name}"`, 'success');
-            await loadSubjectData();
-        }
-    } catch (err) {
-        hideLoading();
-        showToast('Upload failed: ' + err.message, 'error');
-    }
-}
-
-function loadDefaultPOs() {
-    if (!state.subjectId) { showToast('Select a subject first', 'warning'); return; }
-    const defaultPOs = [
-        { po_code: 'PO1', description: 'Engineering knowledge: Apply the knowledge of mathematics, science, engineering fundamentals, and an engineering specialization to the solution of complex engineering problems.' },
-        { po_code: 'PO2', description: 'Problem analysis: Identify, formulate, review research literature, and analyze complex engineering problems reaching substantiated conclusions using first principles of mathematics, natural sciences, and engineering sciences.' },
-        { po_code: 'PO3', description: 'Design/development of solutions: Design solutions for complex engineering problems and design system components or processes that meet the specified needs with appropriate consideration for the public health and safety, and the cultural, societal, and environmental considerations.' },
-        { po_code: 'PO4', description: 'Conduct investigations of complex problems: Use research-based knowledge and research methods including design of experiments, analysis and interpretation of data, and synthesis of the information to provide valid conclusions.' },
-        { po_code: 'PO5', description: 'Modern tool usage: Create, select, and apply appropriate techniques, resources, and modern engineering and IT tools including prediction and modeling to complex engineering activities with an understanding of the limitations.' },
-        { po_code: 'PO6', description: 'The engineer and society: Apply reasoning informed by the contextual knowledge to assess societal, health, safety, legal and cultural issues and the consequent responsibilities relevant to the professional engineering practice.' },
-        { po_code: 'PO7', description: 'Environment and sustainability: Understand the impact of the professional engineering solutions in societal and environmental contexts, and demonstrate the knowledge of, and need for sustainable development.' },
-        { po_code: 'PO8', description: 'Ethics: Apply ethical principles and commit to professional ethics and responsibilities and norms of the engineering practice.' },
-        { po_code: 'PO9', description: 'Individual and team work: Function effectively as an individual, and as a member or leader in diverse teams, and in multidisciplinary settings.' },
-        { po_code: 'PO10', description: 'Communication: Communicate effectively on complex engineering activities with the engineering community and with society at large, such as, being able to comprehend and write effective reports and design documentation, make effective presentations, and give and receive clear instructions.' },
-        { po_code: 'PO11', description: 'Project management and finance: Demonstrate knowledge and understanding of the engineering and management principles and apply these to one\'s own work, as a member and leader in a team, to manage projects and in multidisciplinary environments.' },
-    ];
-    loadBatchPOs(defaultPOs);
-}
-
-async function loadBatchPOs(pos) {
-    showLoading('Loading POs...');
-    try {
-        await API.post(`/api/subjects/${state.subjectId}/pos/batch`, pos);
-        hideLoading();
-        showToast(`Loaded ${pos.length} Program Outcomes`, 'success');
-        await loadSubjectData();
-    } catch (err) {
-        hideLoading();
-        showToast(err.message, 'error');
-    }
-}
-
-function loadDefaultPSOs() {
-    if (!state.subjectId) { showToast('Select a subject first', 'warning'); return; }
-    const defaultPSOs = [
-        { pso_code: 'PSO1', description: 'Apply foundational knowledge of computer science and engineering to solve computational and real-world problems.' },
-        { pso_code: 'PSO2', description: 'Design, develop, and deploy software applications using modern tools, programming languages, and frameworks.' },
-        { pso_code: 'PSO3', description: 'Apply research-based and innovative approaches to solve interdisciplinary problems using emerging technologies.' },
-    ];
-    loadBatchPSOs(defaultPSOs);
-}
-
-async function loadBatchPSOs(psos) {
-    showLoading('Loading PSOs...');
-    try {
-        await API.post(`/api/subjects/${state.subjectId}/psos/batch`, psos);
-        hideLoading();
-        showToast(`Loaded ${psos.length} PSOs`, 'success');
-        await loadSubjectData();
-    } catch (err) {
-        hideLoading();
-        showToast(err.message, 'error');
-    }
-}
-
-
-// =============================================
-// AI MAPPING TAB
-// =============================================
 
 async function generateMapping() {
-    if (!state.subjectId) { showToast('Select a subject first', 'warning'); return; }
-    if (!state.cos.length) { showToast('Add Course Outcomes first', 'warning'); return; }
-    if (!state.pos.length) { showToast('Add Program Outcomes first', 'warning'); return; }
+  if (!S.courseId) return toast('Please select a course first');
+  if (S.cos.length === 0) return toast('Add or extract Course Outcomes (COs) first');
+  if (S.pos.length === 0) return toast('Add or extract Program Outcomes (POs) first');
 
-    const method = document.getElementById('mapping-method').value;
-    showLoading(`Generating ${method} mapping...`);
+  const btn = $('generate-btn');
+  const matrixEmpty = $('matrix-empty');
+  btn.disabled = true;
+  btn.textContent = 'Generating AI Matrix...';
 
-    try {
-        const result = await API.post('/api/mapping/generate', {
-            subject_id: state.subjectId,
-            method: method,
-        });
-        state.mappings = result.mappings;
-        hideLoading();
-        showToast(`Generated ${result.count} mappings using ${method} method`, 'success');
-        renderMappingMatrix();
-        renderReviewTable();
-    } catch (err) {
-        hideLoading();
-        showToast('Generation failed: ' + err.message, 'error');
+  if (matrixEmpty) {
+    matrixEmpty.style.display = 'block';
+    matrixEmpty.textContent = 'Analyzing CO-PO correlations and computing explainable mapping levels...';
+  }
+
+  try {
+    const res = await api('/api/mapping/generate', {
+      method: 'POST',
+      body: JSON.stringify({
+        subject_id: S.courseId,
+        method: 'hybrid'
+      })
+    });
+
+    S.mappings = res.mappings || [];
+    renderMatrix();
+    toast('CO-PO mapping matrix generated successfully!');
+  } catch (err) {
+    toast(`Failed to generate matrix: ${err.message}`);
+    if (matrixEmpty) {
+      matrixEmpty.textContent = `Error: ${err.message}`;
     }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Generate Mapping Matrix ⟳';
+  }
 }
 
-async function loadExistingMappings() {
-    if (!state.subjectId) return;
-    try {
-        const result = await API.get(`/api/mapping/${state.subjectId}`);
-        state.mappings = result.mappings;
-        if (state.mappings.length) {
-            renderMappingMatrix();
-            renderReviewTable();
-        }
-    } catch (e) { /* no mappings yet */ }
-}
+function renderMatrix() {
+  const empty = $('matrix-empty');
+  const wrap = $('matrix-wrap');
 
-function renderMappingMatrix() {
-    const container = document.getElementById('mapping-matrix');
-    if (!state.mappings.length) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-icon">🎯</div>
-                <p>No mappings generated yet. Use the button above to generate.</p>
-            </div>`;
-        return;
-    }
+  if (!S.courseId || S.cos.length === 0 || S.pos.length === 0) {
+    empty.style.display = 'block';
+    empty.textContent = 'Select a course with COs and POs to generate the mapping matrix.';
+    wrap.innerHTML = '';
+    return;
+  }
 
-    // Build matrix data
-    const coSet = [...new Set(state.mappings.map(m => m.co_code))].sort();
-    const poSet = [...new Set(state.mappings.filter(m => m.po_pso_type === 'PO').map(m => m.po_pso_code))].sort((a,b) => {
-        const na = parseInt(a.replace('PO',''));
-        const nb = parseInt(b.replace('PO',''));
-        return na - nb;
-    });
-    const psoSet = [...new Set(state.mappings.filter(m => m.po_pso_type === 'PSO').map(m => m.po_pso_code))].sort((a,b) => {
-        const na = parseInt(a.replace('PSO',''));
-        const nb = parseInt(b.replace('PSO',''));
-        return na - nb;
-    });
-    const allCols = [...poSet, ...psoSet];
+  if (!S.mappings || S.mappings.length === 0) {
+    empty.style.display = 'block';
+    empty.textContent = 'No mapping matrix generated yet for this course. Click "Generate Mapping Matrix" above to run AI mapping.';
+    wrap.innerHTML = '';
+    return;
+  }
 
-    const lookup = {};
-    state.mappings.forEach(m => {
-        lookup[`${m.co_code}|${m.po_pso_code}`] = m;
-    });
+  empty.style.display = 'none';
 
-    // Map each CO to its attainment info
-    const coAttainments = {};
-    coSet.forEach(coCode => {
-        const coObj = state.cos.find(c => c.co_code === coCode);
-        const a = coObj && coObj.univ_attainment !== null && coObj.univ_attainment !== undefined ? coObj.univ_attainment : 0.0;
-        const b = coObj && coObj.internal_attainment !== null && coObj.internal_attainment !== undefined ? coObj.internal_attainment : 3.0;
-        const total = (a * 0.6) + (b * 0.4);
-        coAttainments[coCode] = { a, b, total, id: coObj ? coObj.id : null };
-    });
+  const sortedCos = sortOutcomes(S.cos);
+  const sortedPos = sortOutcomes(S.pos);
 
-    let html = '<div class="matrix-container"><table class="matrix-table"><thead><tr>';
-    html += '<th>CO</th>';
-    html += '<th class="attainment-header" title="University Result Level (a)">CO Attainment Level<br>Through University Result (a)</th>';
-    html += '<th class="attainment-header" title="Internal Assessment Level (b)">CO Attainment Level<br>Through Internal Assessment-CCE (b)</th>';
-    html += '<th class="attainment-header" title="(a × 0.6) + (b × 0.4)">Total Attainment<br><small>(a &times; 0.6) + (b &times; 0.4)</small></th>';
+  const mapLookup = new Map(S.mappings.map(m => [`${m.co_code}|${m.po_pso_code}`, m]));
 
-    allCols.forEach(col => {
-        const formattedCol = col.replace(/^(PO|PSO)(\d+)$/, '$1 $2');
-        html += `<th>${formattedCol}</th>`;
-    });
-    html += '</tr></thead><tbody>';
-
-    coSet.forEach(coCode => {
-        const att = coAttainments[coCode];
-        html += `<tr>`;
-        html += `<td><strong>${coCode}</strong></td>`;
-
-        const warnIcon = att.a === 0 ? '<span title="University result is 0 or pending" style="cursor:help; margin-right:4px;">⚠️</span>' : '';
-        if (att.id) {
-            html += `<td class="attainment-cell">${warnIcon}<input type="number" step="0.01" min="0" max="3" class="attainment-input" value="${att.a.toFixed(2)}" onchange="updateCOAttainment(${att.id}, 'univ_attainment', this.value)"></td>`;
-            html += `<td class="attainment-cell"><input type="number" step="0.01" min="0" max="3" class="attainment-input" value="${att.b.toFixed(2)}" onchange="updateCOAttainment(${att.id}, 'internal_attainment', this.value)"></td>`;
-        } else {
-            html += `<td class="attainment-cell">${warnIcon}${att.a.toFixed(2)}</td>`;
-            html += `<td class="attainment-cell">${att.b.toFixed(2)}</td>`;
-        }
-        html += `<td class="attainment-cell"><span class="attainment-total-val">${att.total.toFixed(2)}</span></td>`;
-
-        allCols.forEach(col => {
-            const m = lookup[`${coCode}|${col}`];
-            const level = m ? (m.final_mapping_level !== null && m.final_mapping_level !== undefined ? m.final_mapping_level : m.mapping_level) : 0;
-            const display = level === 0 ? '—' : level;
-            html += `<td onclick="showExplanation('${coCode}','${col}')"><div class="matrix-cell level-${level}">${display}</div></td>`;
-        });
-        html += '</tr>';
-    });
-
-    html += '</tbody>';
-
-    // Footer: PO / PSO Attainment calculation
-    html += '<tfoot>';
-    html += '<tr>';
-    html += '<td colspan="4" style="text-align:right; font-weight:700; padding:12px 16px; background:rgba(99, 102, 241, 0.15); color:var(--text-primary); font-size:0.9rem;">PO / PSO Attainment</td>';
-
-    allCols.forEach(col => {
-        let weightedSum = 0;
-        let weightSum = 0;
-
-        coSet.forEach(coCode => {
-            const m = lookup[`${coCode}|${col}`];
-            const level = m ? (m.final_mapping_level !== null && m.final_mapping_level !== undefined ? m.final_mapping_level : m.mapping_level) : 0;
-            if (level > 0) {
-                const totalAttainment = coAttainments[coCode].total;
-                weightedSum += (totalAttainment * level);
-                weightSum += level;
-            }
-        });
-
-        if (weightSum > 0) {
-            const poAttainment = (weightedSum / weightSum).toFixed(2);
-            html += `<td class="po-attainment-val" title="Calculated as ${weightedSum.toFixed(2)} / ${weightSum}">${poAttainment}</td>`;
-        } else {
-            html += `<td class="po-attainment-val text-muted">—</td>`;
-        }
-    });
-
-    html += '</tr></tfoot></table></div>';
-
-    // Legend & formula box
-    html += `
-        <div class="matrix-legend">
-            <div class="legend-item"><div class="legend-swatch" style="background:var(--level-3)"></div>3 — Strong</div>
-            <div class="legend-item"><div class="legend-swatch" style="background:var(--level-2)"></div>2 — Moderate</div>
-            <div class="legend-item"><div class="legend-swatch" style="background:var(--level-1)"></div>1 — Weak</div>
-            <div class="legend-item"><div class="legend-swatch" style="background:var(--level-0)"></div>— No relation</div>
-        </div>
-        <div class="attainment-formula-box">
-            <div class="attainment-formula-title">
-                <span>📐</span> <strong>PO/PSO Attainment Formula</strong>
-            </div>
-            <div class="attainment-formula-latex">
-                PO Attainment = Σ(CO attainment × Level of mapping of PO with CO) / Σ(Level of Mapping of PO with CO)
-            </div>
-            <div style="font-size:0.85rem; color:var(--text-muted); line-height:1.5;">
-                • <strong>Total CO Attainment</strong> = (University Result [a] &times; 0.6) + (Internal Assessment-CCE [b] &times; 0.4)<br>
-                • You can edit <strong>(a)</strong> and <strong>(b)</strong> directly in the table inputs above to recalculate all attainment scores dynamically.
-            </div>
-        </div>`;
-
-    container.innerHTML = html;
-}
-
-function showExplanation(coCode, poPsoCode) {
-    const m = state.mappings.find(x => x.co_code === coCode && x.po_pso_code === poPsoCode);
-    if (!m) return;
-
-    const panel = document.getElementById('explanation-panel');
-    const co = state.cos.find(c => c.co_code === coCode);
-    const poOrPso = state.pos.find(p => p.po_code === poPsoCode) || state.psos.find(p => p.pso_code === poPsoCode);
-
-    let evidence = [];
-    try {
-        evidence = typeof m.evidence === 'string' ? JSON.parse(m.evidence) : (m.evidence || []);
-    } catch (e) {
-        evidence = m.evidence || [];
-    }
-
-    const confColor = m.confidence > 0.7 ? 'var(--accent-success)' : m.confidence > 0.4 ? 'var(--accent-warning)' : 'var(--accent-danger)';
-
-    document.getElementById('exp-co').textContent = `${coCode}: ${co ? co.description : ''}`;
-    document.getElementById('exp-po').textContent = `${poPsoCode}: ${poOrPso ? (poOrPso.description || poOrPso.po_description) : ''}`;
-    document.getElementById('exp-similarity').textContent = m.similarity_score.toFixed(4);
-    document.getElementById('exp-level').innerHTML = `<span class="decision-badge ${m.mapping_level > 0 ? 'accepted' : 'pending'}">${m.mapping_level === 0 ? '-' : m.mapping_level}</span>`;
-    document.getElementById('exp-confidence').textContent = `${(m.confidence * 100).toFixed(1)}%`;
-    document.getElementById('exp-confidence-bar').style.width = `${m.confidence * 100}%`;
-    document.getElementById('exp-confidence-bar').style.background = confColor;
-    document.getElementById('exp-reason').textContent = m.reason || 'No explanation available.';
-    document.getElementById('exp-evidence').innerHTML = evidence.length
-        ? evidence.map(e => `<span class="evidence-tag">${e}</span>`).join('')
-        : '<span class="text-muted">No evidence</span>';
-    document.getElementById('exp-decision').innerHTML = `<span class="decision-badge ${m.faculty_decision}">${m.faculty_decision}</span>`;
-
-    panel.classList.add('open');
-}
-
-function closeExplanation() {
-    document.getElementById('explanation-panel').classList.remove('open');
-}
-
-
-// =============================================
-// REVIEW TAB
-// =============================================
-
-function renderReviewTable() {
-    const container = document.getElementById('review-table-body');
-    if (!state.mappings.length) {
-        container.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No mappings to review</td></tr>';
-        return;
-    }
-
-    container.innerHTML = state.mappings.map(m => {
-        const levelDisplay = m.mapping_level === 0 ? '—' : m.mapping_level;
-        return `
+  let html = `
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Course Outcome (CO)</th>
+            ${sortedPos.map(p => {
+              const code = p.outcome_code || p.po_code || p.pso_code;
+              return `<th title="${esc(p.description)}">${esc(code)}</th>`;
+            }).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          ${sortedCos.map(co => `
             <tr>
-                <td><strong>${m.co_code}</strong></td>
-                <td>${m.po_pso_code}</td>
-                <td><span class="decision-badge ${m.mapping_level > 0 ? 'accepted' : 'pending'}">${levelDisplay}</span></td>
-                <td>${(m.confidence * 100).toFixed(0)}%</td>
-                <td>${m.similarity_score.toFixed(3)}</td>
-                <td><span class="decision-badge ${m.faculty_decision}">${m.faculty_decision}</span></td>
-                <td>
-                    <div class="btn-group">
-                        <button class="btn btn-sm btn-success" onclick="reviewMapping(${m.id}, 'accepted')">✓</button>
-                        <button class="btn btn-sm btn-warning" onclick="openEditModal(${m.id})">✎</button>
-                        <button class="btn btn-sm btn-danger" onclick="reviewMapping(${m.id}, 'rejected')">✕</button>
-                    </div>
-                </td>
-            </tr>`;
-    }).join('');
+              <td>
+                <b>${esc(co.co_code)}</b><br>
+                <span class="muted">${esc(co.description)}</span>
+              </td>
+              ${sortedPos.map(po => {
+                const poCode = po.outcome_code || po.po_code || po.pso_code;
+                const key = `${co.co_code}|${poCode}`;
+                const m = mapLookup.get(key);
+                const lvl = m?.final_mapping_level ?? m?.mapping_level ?? 0;
+                const mId = m ? m.id : '';
+                return `
+                  <td>
+                    <button class="cell level-${lvl}" 
+                            data-id="${mId}" 
+                            title="Click: view reasoning · Double-click: edit level">
+                      ${lvl === 0 ? '—' : lvl}
+                    </button>
+                  </td>
+                `;
+              }).join('')}
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+    <p class="matrix-note">
+      <b>Legend:</b> Level 3: Strong · 2: Moderate · 1: Low · —: No relationship.
+      Click a cell to see AI reasoning & evidence keywords. Double-click to edit mapping level with faculty audit notes.
+    </p>
+  `;
+
+  wrap.innerHTML = html;
+
+  // Attach cell click & double-click events
+  document.querySelectorAll('.cell').forEach(btn => {
+    btn.onclick = () => {
+      const id = parseInt(btn.dataset.id, 10);
+      if (id) showCellDetails(id);
+    };
+    btn.ondblclick = e => {
+      e.preventDefault();
+      const id = parseInt(btn.dataset.id, 10);
+      if (id) openCellOverrideModal(id);
+    };
+  });
 }
 
-async function reviewMapping(mappingId, decision) {
-    try {
-        await API.put(`/api/mapping/${mappingId}/review`, {
-            faculty_decision: decision,
-        });
-        showToast(`Mapping ${decision}`, 'success');
-        // Reload mappings
-        const result = await API.get(`/api/mapping/${state.subjectId}`);
-        state.mappings = result.mappings;
-        renderMappingMatrix();
-        renderReviewTable();
-    } catch (err) {
-        showToast(err.message, 'error');
-    }
+function showCellDetails(mappingId) {
+  const m = S.mappings.find(x => x.id === mappingId);
+  if (!m) return;
+
+  $('detail-title').textContent = `${m.co_code} → ${m.po_pso_code}`;
+  $('detail-level').textContent = m.final_mapping_level ?? m.mapping_level;
+  $('detail-confidence').textContent = `${Math.round(m.confidence * 100)}%`;
+  $('detail-similarity').textContent = Number(m.similarity_score).toFixed(2);
+  $('detail-reason').textContent = m.reason || 'No explanation generated.';
+
+  const evidenceList = Array.isArray(m.evidence) ? m.evidence : [];
+  $('detail-evidence').innerHTML = evidenceList.length > 0
+    ? evidenceList.map(tag => `<span>${esc(tag)}</span>`).join('')
+    : '<span>General semantic alignment</span>';
+
+  $('drawer').classList.add('open');
 }
 
-async function acceptAllMappings() {
-    if (!state.mappings.length) return;
-    const pendingIds = state.mappings.filter(m => m.faculty_decision === 'pending').map(m => m.id);
-    if (!pendingIds.length) { showToast('No pending mappings', 'info'); return; }
+function openCellOverrideModal(mappingId) {
+  const m = S.mappings.find(x => x.id === mappingId);
+  if (!m) return;
 
-    try {
-        await API.put('/api/mapping/batch-review', {
-            mapping_ids: pendingIds,
-            faculty_decision: 'accepted',
-        });
-        showToast(`Accepted ${pendingIds.length} mappings`, 'success');
-        const result = await API.get(`/api/mapping/${state.subjectId}`);
-        state.mappings = result.mappings;
-        renderMappingMatrix();
-        renderReviewTable();
-    } catch (err) {
-        showToast(err.message, 'error');
-    }
+  S.editingCell = m;
+  $('edit-title').textContent = `Override ${m.co_code} → ${m.po_pso_code}`;
+  $('edit-level').value = m.final_mapping_level ?? m.mapping_level;
+  $('edit-notes').value = m.faculty_notes || '';
+
+  $('edit-modal').classList.add('open');
 }
 
-function openEditModal(mappingId) {
-    const m = state.mappings.find(x => x.id === mappingId);
-    if (!m) return;
+async function saveCellOverride(e) {
+  e.preventDefault();
+  const m = S.editingCell;
+  if (!m) return;
 
-    document.getElementById('edit-mapping-id').value = mappingId;
-    document.getElementById('edit-co-code').textContent = m.co_code;
-    document.getElementById('edit-po-code').textContent = m.po_pso_code;
-    document.getElementById('edit-ai-level').textContent = m.mapping_level === 0 ? '-' : m.mapping_level;
-    document.getElementById('edit-level').value = m.mapping_level;
-    document.getElementById('edit-notes').value = m.faculty_notes || '';
+  const finalLvl = parseInt($('edit-level').value, 10);
+  const notes = $('edit-notes').value.trim();
 
-    document.getElementById('edit-modal').classList.add('active');
-}
-
-function closeEditModal() {
-    document.getElementById('edit-modal').classList.remove('active');
-}
-
-async function saveEdit() {
-    const mappingId = document.getElementById('edit-mapping-id').value;
-    const level = parseInt(document.getElementById('edit-level').value);
-    const notes = document.getElementById('edit-notes').value;
-
-    try {
-        await API.put(`/api/mapping/${mappingId}/review`, {
-            faculty_decision: 'edited',
-            final_mapping_level: level,
-            faculty_notes: notes,
-        });
-        closeEditModal();
-        showToast('Mapping edited', 'success');
-        const result = await API.get(`/api/mapping/${state.subjectId}`);
-        state.mappings = result.mappings;
-        renderMappingMatrix();
-        renderReviewTable();
-    } catch (err) {
-        showToast(err.message, 'error');
-    }
-}
-
-
-// =============================================
-// EVALUATION TAB
-// =============================================
-
-async function runEvaluation() {
-    if (!state.subjectId) { showToast('Select a subject first', 'warning'); return; }
-    showLoading('Running evaluation against reference mappings...');
-    try {
-        const result = await API.post('/api/mapping/evaluate', {
-            subject_id: state.subjectId,
-        });
-        hideLoading();
-        state.evaluations = result.evaluations;
-        renderEvaluationResults(result.evaluations);
-        showToast('Evaluation complete!', 'success');
-    } catch (err) {
-        hideLoading();
-        showToast('Evaluation failed: ' + err.message, 'error');
-    }
-}
-
-async function loadEvaluationResults() {
-    if (!state.subjectId) return;
-    try {
-        const result = await API.get(`/api/mapping/evaluation/${state.subjectId}`);
-        if (result.evaluations.length) {
-            // Group by method, take latest
-            const byMethod = {};
-            result.evaluations.forEach(e => { byMethod[e.method] = e; });
-            state.evaluations = byMethod;
-            renderEvaluationResults(byMethod);
-        }
-    } catch (e) { /* no evaluations */ }
-}
-
-function renderEvaluationResults(evaluations) {
-    const container = document.getElementById('evaluation-results');
-
-    if (!evaluations || !Object.keys(evaluations).length) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-icon">📊</div>
-                <p>No evaluation results yet. Upload reference mappings and run evaluation.</p>
-            </div>`;
-        return;
-    }
-
-    // Find the best performing method for highlighting
-    let bestMethod = null;
-    let bestF1 = -1;
-    Object.entries(evaluations).forEach(([method, data]) => {
-        if (data.f1_macro > bestF1) { bestF1 = data.f1_macro; bestMethod = method; }
+  try {
+    const res = await api(`/api/mapping/${m.id}/review`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        faculty_decision: 'edited',
+        final_mapping_level: finalLvl,
+        faculty_notes: notes || null
+      })
     });
 
-    let html = '';
-
-    // Metrics cards for the best/first method
-    const primary = evaluations[Object.keys(evaluations)[0]];
-    html += `
-        <div class="metrics-grid">
-            <div class="metric-card">
-                <div class="metric-value">${(primary.accuracy * 100).toFixed(1)}%</div>
-                <div class="metric-label">Accuracy</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-value">${(primary.precision_macro * 100).toFixed(1)}%</div>
-                <div class="metric-label">Precision</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-value">${(primary.recall_macro * 100).toFixed(1)}%</div>
-                <div class="metric-label">Recall</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-value">${(primary.f1_macro * 100).toFixed(1)}%</div>
-                <div class="metric-label">F1 Score</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-value">${primary.agreement_percentage.toFixed(1)}%</div>
-                <div class="metric-label">Agreement</div>
-            </div>
-        </div>`;
-
-    // Comparison table
-    if (Object.keys(evaluations).length > 1) {
-        html += '<div class="card"><div class="card-title"><span class="icon">📈</span> Method Comparison</div>';
-        html += '<table class="comparison-table"><thead><tr><th>Method</th><th>Accuracy</th><th>Precision</th><th>Recall</th><th>F1</th><th>Agreement</th></tr></thead><tbody>';
-        Object.entries(evaluations).forEach(([method, data]) => {
-            const isBest = method === bestMethod;
-            html += `<tr>
-                <td><strong>${method}</strong></td>
-                <td class="${isBest ? 'best' : ''}">${(data.accuracy * 100).toFixed(1)}%</td>
-                <td class="${isBest ? 'best' : ''}">${(data.precision_macro * 100).toFixed(1)}%</td>
-                <td class="${isBest ? 'best' : ''}">${(data.recall_macro * 100).toFixed(1)}%</td>
-                <td class="${isBest ? 'best' : ''}">${(data.f1_macro * 100).toFixed(1)}%</td>
-                <td class="${isBest ? 'best' : ''}">${data.agreement_percentage.toFixed(1)}%</td>
-            </tr>`;
-        });
-        html += '</tbody></table></div>';
-    }
-
-    // Confusion matrix
-    if (primary.confusion_matrix && primary.confusion_matrix.length) {
-        html += '<div class="card"><div class="card-title"><span class="icon">🔢</span> Confusion Matrix</div>';
-        html += '<table class="confusion-table"><thead><tr><th>True \\ Pred</th><th>Level 0</th><th>Level 1</th><th>Level 2</th><th>Level 3</th></tr></thead><tbody>';
-        const labels = ['Level 0', 'Level 1', 'Level 2', 'Level 3'];
-        primary.confusion_matrix.forEach((row, i) => {
-            html += `<tr><th>${labels[i]}</th>`;
-            row.forEach(val => { html += `<td>${val}</td>`; });
-            html += '</tr>';
-        });
-        html += '</tbody></table></div>';
-    }
-
-    // Per-CO accuracy
-    if (primary.per_co_accuracy && Object.keys(primary.per_co_accuracy).length) {
-        html += '<div class="card"><div class="card-title"><span class="icon">📋</span> Per-CO Accuracy</div><table class="comparison-table"><thead><tr><th>CO</th><th>Accuracy</th></tr></thead><tbody>';
-        Object.entries(primary.per_co_accuracy).sort().forEach(([co, acc]) => {
-            html += `<tr><td>${co}</td><td>${(acc * 100).toFixed(1)}%</td></tr>`;
-        });
-        html += '</tbody></table></div>';
-    }
-
-    // Per-PO accuracy
-    if (primary.per_po_accuracy && Object.keys(primary.per_po_accuracy).length) {
-        html += '<div class="card"><div class="card-title"><span class="icon">📋</span> Per-PO Accuracy</div><table class="comparison-table"><thead><tr><th>PO/PSO</th><th>Accuracy</th></tr></thead><tbody>';
-        Object.entries(primary.per_po_accuracy).sort().forEach(([po, acc]) => {
-            html += `<tr><td>${po}</td><td>${(acc * 100).toFixed(1)}%</td></tr>`;
-        });
-        html += '</tbody></table></div>';
-    }
-
-    container.innerHTML = html;
+    Object.assign(m, res.mapping);
+    $('edit-modal').classList.remove('open');
+    $('drawer').classList.remove('open');
+    renderMatrix();
+    toast('Cell override saved.');
+  } catch (err) {
+    toast(`Failed to save override: ${err.message}`);
+  }
 }
-
-
-// =============================================
-// EXPORT TAB
-// =============================================
 
 function exportExcel() {
-    if (!state.subjectId) { showToast('Select a subject first', 'warning'); return; }
-    window.open(`/api/excel/export/${state.subjectId}`, '_blank');
+  if (!S.courseId) return toast('Please select a course first');
+  window.open(`/api/excel/export/${S.courseId}`, '_blank');
 }
+
+// Global initialization on DOM ready
+document.addEventListener('DOMContentLoaded', init);

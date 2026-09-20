@@ -1,352 +1,270 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="AI-powered CO-PO Mapping Agent for automated Course Outcome to Program Outcome mapping with semantic analysis and LLM reasoning.">
-    <title>AI CO-PO Mapping Agent</title>
-    <link rel="stylesheet" href="/static/style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Outcome Studio — CO-PO Mapping Agent</title>
+  <link rel="stylesheet" href="/static/style.css?v=2.2">
 </head>
 <body>
 
-<div class="app-container">
+  <header class="topbar">
+    <a class="brand" href="#">◈ Outcome Studio</a>
+    <p>Automated CO-PO Syllabus Extraction & AI Mapping</p>
+    <div id="mode-badge" class="status">Connecting…</div>
+  </header>
 
-    <!-- Header -->
-    <header class="app-header">
-        <h1>🎯 AI CO-PO Mapping Agent</h1>
-        <p class="subtitle">Automated Course Outcome — Program Outcome Mapping with AI</p>
-        <div class="status-badge">
-            <span class="dot"></span>
-            <span id="mode-badge">Loading...</span>
+  <main>
+    <!-- WORKFLOW STEPPER -->
+    <div class="stepper-container">
+      <div class="stepper">
+        <div class="step-item" id="step-1-indicator">
+          <div class="step-circle">1</div>
+          <div class="step-label">Upload Syllabus PDF</div>
         </div>
-    </header>
+        <div class="step-line"></div>
+        <div class="step-item active" id="step-2-indicator">
+          <div class="step-circle">2</div>
+          <div class="step-label">Select Course & Edit Outcomes</div>
+        </div>
+        <div class="step-line"></div>
+        <div class="step-item" id="step-3-indicator">
+          <div class="step-circle">3</div>
+          <div class="step-label">Generate CO-PO Matrix</div>
+        </div>
+      </div>
+    </div>
 
-    <!-- Tab Navigation -->
-    <nav class="tab-nav" role="tablist">
-        <button class="tab-btn active" data-tab="setup" role="tab">⚙️ Setup</button>
-        <button class="tab-btn" data-tab="mapping" role="tab">🤖 AI Mapping</button>
-        <button class="tab-btn" data-tab="review" role="tab">📋 Review</button>
-        <button class="tab-btn" data-tab="evaluation" role="tab">📊 Evaluation</button>
-        <button class="tab-btn" data-tab="export" role="tab">📥 Export</button>
+    <!-- HERO & UPLOAD SECTION -->
+    <section class="hero-section">
+      <div class="hero-text">
+        <p class="eyebrow">AUTOMATED ACADEMIC CURRICULUM EXTRACTOR</p>
+        <h1>Upload Syllabus PDF.<br><em>Extract COs & POs automatically.</em></h1>
+        <p class="lead">
+          Upload any engineering syllabus PDF (e.g. Savitribai Phule Pune University NEP-2020 curriculum). 
+          Program Outcomes (POs) and course-wise Course Outcomes (COs) are automatically extracted. 
+          Select any course to view, edit, or adjust outcomes, and proceed towards explainable AI CO-PO matrix generation.
+        </p>
+      </div>
+
+      <!-- SINGLE PDF UPLOAD CARD -->
+      <div class="upload-card">
+        <div class="upload-header">
+          <span class="upload-icon">📄</span>
+          <h3>Upload Syllabus PDF</h3>
+          <p class="muted">Extracts shared POs/PSOs & all courses with their COs</p>
+        </div>
+        
+        <form id="pdf-upload-form" class="upload-form" onsubmit="event.preventDefault(); handlePDFUpload(event); return false;">
+          <div class="file-drop-area" id="drop-area">
+            <input type="file" id="pdf-file-input" accept=".pdf" />
+            <span class="file-msg" id="file-label">Click or drag & drop syllabus PDF here</span>
+          </div>
+          <button type="button" id="upload-btn" onclick="handlePDFUpload(event)" class="button primary block">
+            Extract POs & COs from PDF
+          </button>
+        </form>
+        <div id="upload-status" class="upload-status"></div>
+      </div>
+    </section>
+
+    <!-- COURSE SELECTOR BAR -->
+    <section class="selector-section">
+      <div class="selector-card">
+        <div class="selector-info">
+          <span class="section-kicker">SELECT COURSE FOR OUTCOME REVIEW & MAPPING</span>
+          <h2 id="current-framework-name">Framework: Upload Syllabus PDF to extract outcomes</h2>
+          <p id="current-framework-details" class="muted">Academic Year: 2025-26 | Department: E&TC</p>
+        </div>
+        <div class="selector-control">
+          <label for="course-select"><b>Select Course from List:</b></label>
+          <select id="course-select">
+            <option value="">-- Upload PDF or Select a Course --</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <!-- MAIN TABS -->
+    <nav class="tabs">
+      <button class="active" data-tab="outcomes-tab" id="tab-btn-outcomes">Outcomes & Management</button>
+      <button data-tab="matrix-tab" id="tab-btn-matrix">Mapping Matrix</button>
+      <button data-tab="export-tab" id="tab-btn-export">Export & Download</button>
     </nav>
 
-    <!-- ======================== SETUP TAB ======================== -->
-    <div id="tab-setup" class="tab-content active">
+    <!-- PAGE 1: OUTCOMES & MANAGEMENT -->
+    <section id="outcomes-tab" class="page active">
+      
+      <!-- PROCEED CALL-TO-ACTION BANNER -->
+      <div class="proceed-banner">
+        <div class="proceed-info">
+          <h3 id="selected-course-banner-title">Select a course to view and edit outcomes</h3>
+          <p id="selected-course-banner-sub" class="muted">
+            Verify and customize the extracted Course Outcomes (COs) and Program Outcomes (POs) below. When ready, click to proceed towards generating the CO-PO mapping matrix.
+          </p>
+        </div>
+        <button id="proceed-matrix-btn" class="button primary large proceed-cta">
+          Approve & Proceed to CO-PO Matrix Generation →
+        </button>
+      </div>
 
-        <!-- Create / Select Subject -->
-        <div class="card">
-            <div class="card-title"><span class="icon">📚</span> Course / Subject</div>
-
-            <form id="form-subject">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="course-code">Course Code *</label>
-                        <input type="text" id="course-code" placeholder="e.g., CS206" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="course-name">Course Name *</label>
-                        <input type="text" id="course-name" placeholder="e.g., Data Structures" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="semester">Semester</label>
-                        <input type="text" id="semester" placeholder="e.g., IV">
-                    </div>
-                    <div class="form-group">
-                        <label for="academic-year">Academic Year</label>
-                        <input type="text" id="academic-year" placeholder="e.g., 2024-25">
-                    </div>
-                    <div class="form-group">
-                        <label for="department">Department</label>
-                        <input type="text" id="department" placeholder="e.g., Computer Science">
-                    </div>
-                </div>
-                <button type="submit" class="btn btn-primary mt-2">Create Subject</button>
-            </form>
-
-            <div class="mt-4">
-                <div class="detail-label mb-2">Existing Subjects</div>
-                <ul id="subject-list" class="item-list"></ul>
+      <div class="grid two">
+        
+        <!-- COURSE OUTCOMES (COs) -->
+        <article class="card">
+          <div class="card-header">
+            <div>
+              <span class="section-kicker">COURSE SPECIFIC OUTCOMES</span>
+              <div class="card-title-row">
+                <h2 id="co-card-title">Course Outcomes (COs)</h2>
+                <span id="co-count-badge" class="badge">0 COs</span>
+              </div>
+              <p class="muted">Reflected for selected course. Click "Edit" to modify or "Remove" to delete.</p>
             </div>
-        </div>
+            <button id="add-co-btn" class="button secondary small">+ Add CO</button>
+          </div>
+          <div id="co-list-container" class="item-list">
+            <div class="empty-state">Select a course from the list above to view its Course Outcomes.</div>
+          </div>
+        </article>
 
-        <!-- Selected Subject Panel -->
-        <div id="selected-subject-panel" class="hidden">
-            <div class="card" style="border-left: 3px solid var(--accent-primary);">
-                <div class="card-title">
-                    <span class="icon">✅</span>
-                    <span>Selected: <strong id="selected-subject-name"></strong></span>
-                </div>
+        <!-- PROGRAM OUTCOMES (POs / PSOs) -->
+        <article class="card">
+          <div class="card-header">
+            <div>
+              <span class="section-kicker">SHARED PROGRAMME FRAMEWORK</span>
+              <div class="card-title-row">
+                <h2 id="po-card-title">Program Outcomes (POs / PSOs)</h2>
+                <span id="po-count-badge" class="badge">0 POs</span>
+              </div>
+              <p class="muted">Shared for all courses in this academic stream. Fully editable & manageable.</p>
             </div>
+            <button id="add-po-btn" class="button secondary small">+ Add PO/PSO</button>
+          </div>
+          <div id="po-list-container" class="item-list">
+            <div class="empty-state">Upload or select a syllabus framework to view its Program Outcomes.</div>
+          </div>
+        </article>
 
-            <!-- Course Outcomes -->
-            <div class="card">
-                <div class="card-title"><span class="icon">🎯</span> Course Outcomes (COs)</div>
-                <form id="form-add-co" class="form-row mb-4">
-                    <div class="form-group">
-                        <label for="co-code">CO Code</label>
-                        <input type="text" id="co-code" placeholder="e.g., CO1" required>
-                    </div>
-                    <div class="form-group" style="flex: 2">
-                        <label for="co-desc">Description</label>
-                        <input type="text" id="co-desc" placeholder="e.g., Apply and implement sorting algorithms..." required>
-                    </div>
-                    <div class="form-group" style="max-width: 130px;">
-                        <label for="co-univ-attainment">Univ (a)</label>
-                        <input type="number" step="0.01" min="0" max="3" id="co-univ-attainment" placeholder="0.00" value="0.00">
-                    </div>
-                    <div class="form-group" style="max-width: 130px;">
-                        <label for="co-internal-attainment">Internal (b)</label>
-                        <input type="number" step="0.01" min="0" max="3" id="co-internal-attainment" placeholder="3.00" value="3.00">
-                    </div>
-                    <div class="form-group" style="align-self: end;">
-                        <button type="submit" class="btn btn-primary">Add CO</button>
-                    </div>
-                </form>
-                <ul id="co-list" class="item-list"></ul>
-            </div>
+      </div>
 
-            <!-- Program Outcomes -->
-            <div class="card">
-                <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
-                    <div class="card-title mb-0"><span class="icon">📐</span> Program Outcomes (POs)</div>
-                    <button class="btn btn-sm btn-outline" onclick="loadDefaultPOs()">Load NBA Standard POs</button>
-                </div>
-                <form id="form-add-po" class="form-row mb-4">
-                    <div class="form-group">
-                        <label for="po-code">PO Code</label>
-                        <input type="text" id="po-code" placeholder="e.g., PO1" required>
-                    </div>
-                    <div class="form-group" style="flex: 3">
-                        <label for="po-desc">Description</label>
-                        <input type="text" id="po-desc" placeholder="e.g., Engineering knowledge" required>
-                    </div>
-                    <div class="form-group" style="align-self: end;">
-                        <button type="submit" class="btn btn-primary">Add PO</button>
-                    </div>
-                </form>
-                <ul id="po-list" class="item-list"></ul>
-            </div>
-
-            <!-- PSOs -->
-            <div class="card">
-                <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
-                    <div class="card-title mb-0"><span class="icon">🔬</span> Program Specific Outcomes (PSOs)</div>
-                    <button class="btn btn-sm btn-outline" onclick="loadDefaultPSOs()">Load Default PSOs</button>
-                </div>
-                <form id="form-add-pso" class="form-row mb-4">
-                    <div class="form-group">
-                        <label for="pso-code">PSO Code</label>
-                        <input type="text" id="pso-code" placeholder="e.g., PSO1" required>
-                    </div>
-                    <div class="form-group" style="flex: 3">
-                        <label for="pso-desc">Description</label>
-                        <input type="text" id="pso-desc" placeholder="e.g., Apply foundational knowledge..." required>
-                    </div>
-                    <div class="form-group" style="align-self: end;">
-                        <button type="submit" class="btn btn-primary">Add PSO</button>
-                    </div>
-                </form>
-                <ul id="pso-list" class="item-list"></ul>
-            </div>
-
-            <!-- Excel Upload -->
-            <div class="card">
-                <div class="card-title"><span class="icon">📄</span> Upload Reference Excel</div>
-                <p class="text-muted mb-4" style="font-size: 0.88rem;">Upload the faculty-created reference workbook to extract ground-truth CO-PO mappings for evaluation.</p>
-                <div id="excel-upload-area" class="file-upload">
-                    <input type="file" id="excel-file-input" accept=".xlsx,.xls">
-                    <div class="upload-icon">📁</div>
-                    <div class="upload-text">
-                        <strong>Click to upload</strong> or drag and drop<br>
-                        <span class="text-muted">.xlsx files only</span>
-                    </div>
-                </div>
-            </div>
+      <!-- BOTTOM ACTION BAR -->
+      <div class="outcomes-footer-bar">
+        <div class="footer-status">
+          <span class="status-indicator-dot"></span>
+          <span id="footer-status-text">Select course and review outcomes</span>
         </div>
-    </div>
+        <button id="proceed-matrix-btn-bottom" class="button primary">
+          Approve & Proceed to CO-PO Matrix Generation →
+        </button>
+      </div>
+    </section>
 
-    <!-- ======================== AI MAPPING TAB ======================== -->
-    <div id="tab-mapping" class="tab-content">
-        <div class="card">
-            <div class="card-title"><span class="icon">🤖</span> Generate AI Mapping</div>
-            <div class="flex items-center gap-2 flex-wrap">
-                <div class="form-group" style="margin-bottom: 0; min-width: 200px;">
-                    <select id="mapping-method">
-                        <option value="hybrid">Hybrid (Recommended)</option>
-                        <option value="embedding_only">Embedding Only</option>
-                        <option value="llm_only">LLM Only</option>
-                    </select>
-                </div>
-                <button class="btn btn-primary btn-lg" onclick="generateMapping()">
-                    ⚡ Generate CO-PO Mapping
-                </button>
-                <button class="btn btn-outline" onclick="loadExistingMappings()">
-                    Load Existing
-                </button>
-            </div>
+    <!-- PAGE 2: MAPPING MATRIX -->
+    <section id="matrix-tab" class="page">
+      <div class="matrix-head">
+        <div>
+          <span class="section-kicker">AI MAPPING & FACULTY CALIBRATION</span>
+          <h2 id="matrix-course-title">Mapping Matrix</h2>
+          <p class="muted">Click any cell for AI reasoning & evidence. Double-click to override mapping level with audit rationale.</p>
         </div>
-
-        <div class="card">
-            <div class="card-title"><span class="icon">📊</span> Mapping Matrix</div>
-            <div id="mapping-matrix">
-                <div class="empty-state">
-                    <div class="empty-icon">🎯</div>
-                    <p>No mappings generated yet. Select a subject and generate mappings.</p>
-                </div>
-            </div>
+        <div class="matrix-actions">
+          <button id="back-outcomes-btn" class="button secondary">← Edit Outcomes</button>
+          <button id="generate-btn" class="button primary">Generate Mapping Matrix ⟳</button>
         </div>
-    </div>
+      </div>
+      <div id="matrix-empty" class="empty">Please select a course and verify COs/POs to generate the mapping matrix.</div>
+      <div id="matrix-wrap"></div>
+    </section>
 
-    <!-- ======================== REVIEW TAB ======================== -->
-    <div id="tab-review" class="tab-content">
-        <div class="card">
-            <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
-                <div class="card-title mb-0"><span class="icon">📋</span> Faculty Review</div>
-                <div class="btn-group">
-                    <button class="btn btn-sm btn-success" onclick="acceptAllMappings()">✓ Accept All Pending</button>
-                </div>
-            </div>
-            <div style="overflow-x: auto;">
-                <table class="review-table">
-                    <thead>
-                        <tr>
-                            <th>CO</th>
-                            <th>PO/PSO</th>
-                            <th>AI Level</th>
-                            <th>Confidence</th>
-                            <th>Similarity</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="review-table-body">
-                        <tr><td colspan="7" class="text-center text-muted">No mappings to review. Generate mappings first.</td></tr>
-                    </tbody>
-                </table>
-            </div>
+    <!-- PAGE 3: EXPORT -->
+    <section id="export-tab" class="page">
+      <article class="export-card">
+        <div>
+          <span class="section-kicker">EXPORT TO EXCEL</span>
+          <h2>Download Approved CO-PO Matrix</h2>
+          <p>Generates an official Excel workbook with mapping levels, AI reasoning explanations, and faculty audit trail.</p>
         </div>
-    </div>
+        <button id="export-button" class="button primary">Download Excel (.xlsx)</button>
+      </article>
+    </section>
+  </main>
 
-    <!-- ======================== EVALUATION TAB ======================== -->
-    <div id="tab-evaluation" class="tab-content">
-        <div class="card">
-            <div class="flex justify-between items-center flex-wrap gap-2">
-                <div class="card-title mb-0"><span class="icon">📊</span> Evaluation Against Reference</div>
-                <div class="btn-group">
-                    <button class="btn btn-primary" onclick="runEvaluation()">🔍 Run Evaluation</button>
-                    <button class="btn btn-outline" onclick="loadEvaluationResults()">Load Results</button>
-                </div>
-            </div>
-        </div>
+  <!-- AI REASONING DRAWER -->
+  <div id="drawer" class="drawer">
+    <button id="drawer-close" class="x">×</button>
+    <span class="section-kicker">WHY THIS MAPPING</span>
+    <h2 id="detail-title">CO → PO</h2>
+    <div class="metric-row">
+      <span><small>Level</small><b id="detail-level"></b></span>
+      <span><small>Confidence</small><b id="detail-confidence"></b></span>
+      <span><small>Similarity</small><b id="detail-similarity"></b></span>
+    </div>
+    <h3>AI Reasoning</h3>
+    <p id="detail-reason"></p>
+    <h3>Evidence Keywords</h3>
+    <div id="detail-evidence" class="tags"></div>
+    <p class="fine">Double-click the cell in the matrix to override with faculty rationale.</p>
+  </div>
 
-        <div id="evaluation-results">
-            <div class="empty-state">
-                <div class="empty-icon">📊</div>
-                <p>No evaluation results yet. Upload reference mappings in Setup, generate AI mappings, then run evaluation.</p>
-            </div>
-        </div>
-    </div>
+  <!-- EDIT / ADD OUTCOME MODAL -->
+  <div id="outcome-modal" class="modal-backdrop">
+    <form id="outcome-modal-form" class="modal">
+      <button type="button" id="outcome-modal-close" class="x">×</button>
+      <span class="section-kicker" id="outcome-modal-kicker">EDIT OUTCOME</span>
+      <h2 id="outcome-modal-title">Outcome Details</h2>
+      
+      <!-- Type selector for POs -->
+      <div id="modal-type-group" style="display:none;">
+        <label>Outcome Type
+          <select id="modal-outcome-type">
+            <option value="PO">PO — Program Outcome</option>
+            <option value="PSO">PSO — Program Specific Outcome</option>
+          </select>
+        </label>
+      </div>
 
-    <!-- ======================== EXPORT TAB ======================== -->
-    <div id="tab-export" class="tab-content">
-        <div class="card">
-            <div class="card-title"><span class="icon">📥</span> Export Results</div>
-            <p class="text-muted mb-4">Download the complete mapping results as an Excel report. Includes mapping matrix, detailed mappings, reference comparison, and evaluation results.</p>
-            <button class="btn btn-primary btn-lg" onclick="exportExcel()">
-                📄 Download Excel Report
-            </button>
-        </div>
-    </div>
+      <label>Code
+        <input id="modal-outcome-code" required placeholder="e.g. CO1 or PO1">
+      </label>
+      
+      <label>Description
+        <textarea id="modal-outcome-desc" rows="5" required placeholder="Outcome description text..."></textarea>
+      </label>
 
-</div>
+      <div class="modal-footer">
+        <button type="button" id="outcome-modal-cancel" class="button secondary">Cancel</button>
+        <button type="submit" class="button primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
 
-<!-- Explanation Side Panel -->
-<div id="explanation-panel" class="explanation-panel">
-    <button class="close-btn" onclick="closeExplanation()">✕</button>
-    <h3>🔍 Mapping Explanation</h3>
+  <!-- FACULTY CELL OVERRIDE MODAL -->
+  <div id="edit-modal" class="modal-backdrop">
+    <form id="edit-form" class="modal">
+      <button type="button" id="edit-close" class="x">×</button>
+      <span class="section-kicker">FACULTY CORRECTION</span>
+      <h2 id="edit-title">Override Cell</h2>
+      <label>Mapping Level
+        <select id="edit-level">
+          <option value="0">0 — No Relationship</option>
+          <option value="1">1 — Low</option>
+          <option value="2">2 — Moderate</option>
+          <option value="3">3 — Strong</option>
+        </select>
+      </label>
+      <label>Faculty Notes / Rationale
+        <textarea id="edit-notes" rows="4" placeholder="Optional notes for audit trail"></textarea>
+      </label>
+      <div class="modal-footer">
+        <button type="button" id="edit-cancel" class="button secondary">Cancel</button>
+        <button type="submit" class="button primary">Save Correction</button>
+      </div>
+    </form>
+  </div>
 
-    <div class="detail-row">
-        <div class="detail-label">Course Outcome</div>
-        <div class="detail-value" id="exp-co"></div>
-    </div>
-    <div class="detail-row">
-        <div class="detail-label">Program Outcome</div>
-        <div class="detail-value" id="exp-po"></div>
-    </div>
-    <div class="detail-row">
-        <div class="detail-label">Semantic Similarity</div>
-        <div class="detail-value" id="exp-similarity"></div>
-    </div>
-    <div class="detail-row">
-        <div class="detail-label">AI Recommended Level</div>
-        <div class="detail-value" id="exp-level"></div>
-    </div>
-    <div class="detail-row">
-        <div class="detail-label">Confidence</div>
-        <div class="detail-value" id="exp-confidence"></div>
-        <div class="confidence-bar"><div class="confidence-fill" id="exp-confidence-bar"></div></div>
-    </div>
-    <div class="detail-row">
-        <div class="detail-label">Explanation</div>
-        <div class="detail-value" id="exp-reason"></div>
-    </div>
-    <div class="detail-row">
-        <div class="detail-label">Evidence</div>
-        <div class="evidence-tags" id="exp-evidence"></div>
-    </div>
-    <div class="detail-row">
-        <div class="detail-label">Faculty Decision</div>
-        <div class="detail-value" id="exp-decision"></div>
-    </div>
-</div>
+  <div id="toast" class="toast"></div>
 
-<!-- Edit Modal -->
-<div id="edit-modal" class="modal-overlay" onclick="if(event.target===this)closeEditModal()">
-    <div class="modal">
-        <h3>✎ Edit Mapping</h3>
-        <input type="hidden" id="edit-mapping-id">
-        <div class="form-group">
-            <label>CO</label>
-            <div class="detail-value" id="edit-co-code"></div>
-        </div>
-        <div class="form-group">
-            <label>PO/PSO</label>
-            <div class="detail-value" id="edit-po-code"></div>
-        </div>
-        <div class="form-group">
-            <label>AI Level</label>
-            <div class="detail-value" id="edit-ai-level"></div>
-        </div>
-        <div class="form-group">
-            <label for="edit-level">Your Level</label>
-            <select id="edit-level">
-                <option value="0">0 (No relationship)</option>
-                <option value="1">1 (Weak)</option>
-                <option value="2">2 (Moderate)</option>
-                <option value="3">3 (Strong)</option>
-            </select>
-        </div>
-        <div class="form-group">
-            <label for="edit-notes">Faculty Notes</label>
-            <textarea id="edit-notes" rows="3" placeholder="Optional notes..."></textarea>
-        </div>
-        <div class="btn-group mt-4">
-            <button class="btn btn-primary" onclick="saveEdit()">Save</button>
-            <button class="btn btn-outline" onclick="closeEditModal()">Cancel</button>
-        </div>
-    </div>
-</div>
-
-<!-- Loading Overlay -->
-<div id="loading-overlay" class="loading-overlay">
-    <div class="spinner"></div>
-    <div class="loading-text" id="loading-text">Processing...</div>
-</div>
-
-<!-- Toast Container -->
-<div id="toast-container" class="toast-container"></div>
-
-<script src="/static/app.js"></script>
-
+  <script src="/static/app.js?v=2.2"></script>
 </body>
 </html>

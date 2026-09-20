@@ -19,11 +19,47 @@ class Subject(Base):
     department = Column(String(100))
     theory_enabled = Column(Boolean, default=True)
     description = Column(Text, nullable=True)
+    # A programme framework owns the canonical PO/PSO definitions.  Subjects
+    # only own their COs, which prevents each teacher from recreating POs.
+    framework_id = Column(Integer, ForeignKey("outcome_frameworks.id"), nullable=True, index=True)
     created_at = Column(DateTime, server_default=func.now())
 
     course_outcomes = relationship("CourseOutcome", back_populates="subject", cascade="all, delete-orphan")
     program_outcomes = relationship("ProgramOutcome", back_populates="subject", cascade="all, delete-orphan")
     program_specific_outcomes = relationship("ProgramSpecificOutcome", back_populates="subject", cascade="all, delete-orphan")
+    framework = relationship("OutcomeFramework", back_populates="subjects")
+
+    @property
+    def co_count(self) -> int:
+        return len(self.course_outcomes) if self.course_outcomes else 0
+
+
+class OutcomeFramework(Base):
+    """A stream/programme's shared catalogue of POs and PSOs."""
+    __tablename__ = "outcome_frameworks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(200), nullable=False, unique=True)
+    department = Column(String(100), nullable=True)
+    description = Column(Text, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    outcomes = relationship("FrameworkOutcome", back_populates="framework", cascade="all, delete-orphan")
+    subjects = relationship("Subject", back_populates="framework")
+
+
+class FrameworkOutcome(Base):
+    """One PO or PSO shared by every subject in an outcome framework."""
+    __tablename__ = "framework_outcomes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    framework_id = Column(Integer, ForeignKey("outcome_frameworks.id"), nullable=False, index=True)
+    outcome_code = Column(String(20), nullable=False)
+    outcome_type = Column(String(10), nullable=False, default="PO")
+    description = Column(Text, nullable=False)
+    created_at = Column(DateTime, server_default=func.now())
+
+    framework = relationship("OutcomeFramework", back_populates="outcomes")
 
 
 class CourseOutcome(Base):
@@ -32,7 +68,7 @@ class CourseOutcome(Base):
     id = Column(Integer, primary_key=True, index=True)
     subject_id = Column(Integer, ForeignKey("subjects.id"), nullable=False)
     co_code = Column(String(20), nullable=False)
-    description = Column(String(1000), nullable=False)
+    description = Column(Text, nullable=False)
     univ_attainment = Column(Float, nullable=True, default=0.0)
     internal_attainment = Column(Float, nullable=True, default=0.0)
     created_at = Column(DateTime, server_default=func.now())
@@ -46,7 +82,7 @@ class ProgramOutcome(Base):
     id = Column(Integer, primary_key=True, index=True)
     subject_id = Column(Integer, ForeignKey("subjects.id"), nullable=False)
     po_code = Column(String(20), nullable=False)
-    description = Column(String(1000), nullable=False)
+    description = Column(Text, nullable=False)
     created_at = Column(DateTime, server_default=func.now())
 
     subject = relationship("Subject", back_populates="program_outcomes")
@@ -58,7 +94,7 @@ class ProgramSpecificOutcome(Base):
     id = Column(Integer, primary_key=True, index=True)
     subject_id = Column(Integer, ForeignKey("subjects.id"), nullable=False)
     pso_code = Column(String(20), nullable=False)
-    description = Column(String(1000), nullable=False)
+    description = Column(Text, nullable=False)
     created_at = Column(DateTime, server_default=func.now())
 
     subject = relationship("Subject", back_populates="program_specific_outcomes")

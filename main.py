@@ -7,8 +7,8 @@ from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
-from database import Base, engine
-from routers import subjects, mapping, excel
+from database import Base, engine, ensure_schema_compatibility
+from routers import subjects, mapping, excel, frameworks, pdf
 
 # Load environment variables
 load_dotenv()
@@ -21,6 +21,7 @@ logging.basicConfig(
 
 # Create all database tables
 Base.metadata.create_all(bind=engine)
+ensure_schema_compatibility()
 
 # Create FastAPI app
 app = FastAPI(
@@ -57,6 +58,8 @@ templates = Jinja2Templates(directory=TEMPLATE_DIR)
 app.include_router(subjects.router)
 app.include_router(mapping.router)
 app.include_router(excel.router)
+app.include_router(frameworks.router)
+app.include_router(pdf.router)
 
 
 @app.get("/")

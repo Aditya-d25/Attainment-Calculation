@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from database import SessionLocal
-from models import Subject, CourseOutcome, ProgramOutcome, ProgramSpecificOutcome
+from models import Subject, CourseOutcome, ProgramOutcome, ProgramSpecificOutcome, OutcomeFramework, FrameworkOutcome, AIMappingResult
 from schemas import (
     SubjectCreate, SubjectResponse,
     CourseOutcomeCreate, CourseOutcomeUpdate, CourseOutcomeResponse,
@@ -36,7 +36,9 @@ def create_subject(data: SubjectCreate, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(status_code=400, detail="Course code already exists")
 
-    subject = Subject(**data.dict())
+    if data.framework_id and not db.query(OutcomeFramework).filter(OutcomeFramework.id == data.framework_id).first():
+        raise HTTPException(status_code=400, detail="Programme framework not found")
+    subject = Subject(**data.model_dump())
     db.add(subject)
     db.commit()
     db.refresh(subject)
@@ -61,6 +63,7 @@ def delete_subject(subject_id: int, db: Session = Depends(get_db)):
     subject = db.query(Subject).filter(Subject.id == subject_id).first()
     if not subject:
         raise HTTPException(status_code=404, detail="Subject not found")
+    db.query(AIMappingResult).filter(AIMappingResult.subject_id == subject_id).delete()
     db.delete(subject)
     db.commit()
     return {"message": "Subject deleted"}
@@ -104,6 +107,8 @@ def update_co(
     if not co:
         raise HTTPException(status_code=404, detail="CO not found")
 
+    if data.co_code is not None:
+        co.co_code = data.co_code.strip().upper()
     if data.univ_attainment is not None:
         co.univ_attainment = data.univ_attainment
     if data.internal_attainment is not None:
@@ -124,6 +129,7 @@ def delete_co(subject_id: int, co_id: int, db: Session = Depends(get_db)):
     ).first()
     if not co:
         raise HTTPException(status_code=404, detail="CO not found")
+    db.query(AIMappingResult).filter(AIMappingResult.co_id == co_id).delete()
     db.delete(co)
     db.commit()
     return {"message": "CO deleted"}
@@ -173,6 +179,15 @@ def create_pos_batch(
 
 @router.get("/{subject_id}/pos", response_model=List[ProgramOutcomeResponse])
 def list_pos(subject_id: int, db: Session = Depends(get_db)):
+    subject = db.query(Subject).filter(Subject.id == subject_id).first()
+    if subject and subject.framework_id:
+        return [
+            {"id": po.id, "subject_id": subject_id, "po_code": po.outcome_code, "description": po.description}
+            for po in db.query(FrameworkOutcome).filter(
+                FrameworkOutcome.framework_id == subject.framework_id,
+                FrameworkOutcome.outcome_type == "PO",
+            ).order_by(FrameworkOutcome.outcome_code).all()
+        ]
     return db.query(ProgramOutcome).filter(
         ProgramOutcome.subject_id == subject_id
     ).order_by(ProgramOutcome.po_code).all()
@@ -224,6 +239,15 @@ def create_psos_batch(
 
 @router.get("/{subject_id}/psos", response_model=List[PSOResponse])
 def list_psos(subject_id: int, db: Session = Depends(get_db)):
+    subject = db.query(Subject).filter(Subject.id == subject_id).first()
+    if subject and subject.framework_id:
+        return [
+            {"id": pso.id, "subject_id": subject_id, "pso_code": pso.outcome_code, "description": pso.description}
+            for pso in db.query(FrameworkOutcome).filter(
+                FrameworkOutcome.framework_id == subject.framework_id,
+                FrameworkOutcome.outcome_type == "PSO",
+            ).order_by(FrameworkOutcome.outcome_code).all()
+        ]
     return db.query(ProgramSpecificOutcome).filter(
         ProgramSpecificOutcome.subject_id == subject_id
     ).order_by(ProgramSpecificOutcome.pso_code).all()

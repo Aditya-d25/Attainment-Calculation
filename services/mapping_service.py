@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from models import (
     Subject, CourseOutcome, ProgramOutcome, ProgramSpecificOutcome,
     AIMappingResult, ReferenceMappingEntry, MappingEvaluation,
-    FacultyDecision,
+    FacultyDecision, FrameworkOutcome,
 )
 from ai.mapper import generate_mappings
 from ai.evaluator import evaluate_mappings, EvaluationReport
@@ -32,13 +32,21 @@ def get_subject_data(db: Session, subject_id: int) -> Dict:
         CourseOutcome.subject_id == subject_id
     ).order_by(CourseOutcome.co_code).all()
 
-    pos = db.query(ProgramOutcome).filter(
-        ProgramOutcome.subject_id == subject_id
-    ).order_by(ProgramOutcome.po_code).all()
-
-    psos = db.query(ProgramSpecificOutcome).filter(
-        ProgramSpecificOutcome.subject_id == subject_id
-    ).order_by(ProgramSpecificOutcome.pso_code).all()
+    # Framework outcomes are canonical for a whole stream.  Fall back to the
+    # legacy subject records only for courses created before frameworks.
+    if subject.framework_id:
+        framework_outcomes = db.query(FrameworkOutcome).filter(
+            FrameworkOutcome.framework_id == subject.framework_id
+        ).order_by(FrameworkOutcome.outcome_type, FrameworkOutcome.outcome_code).all()
+        pos = [row for row in framework_outcomes if row.outcome_type == "PO"]
+        psos = [row for row in framework_outcomes if row.outcome_type == "PSO"]
+    else:
+        pos = db.query(ProgramOutcome).filter(
+            ProgramOutcome.subject_id == subject_id
+        ).order_by(ProgramOutcome.po_code).all()
+        psos = db.query(ProgramSpecificOutcome).filter(
+            ProgramSpecificOutcome.subject_id == subject_id
+        ).order_by(ProgramSpecificOutcome.pso_code).all()
 
     return {
         "subject": subject,
@@ -75,17 +83,23 @@ def run_mapping_generation(
     co_codes = [co.co_code for co in data["cos"]]
     co_texts = [co.description for co in data["cos"]]
 
-    po_pso_codes = [po.po_code for po in data["pos"]] + [pso.pso_code for pso in data["psos"]]
+    def outcome_code(outcome):
+        return getattr(outcome, "outcome_code", None) or getattr(outcome, "po_code", None) or outcome.pso_code
+
+    po_pso_codes = [outcome_code(po) for po in data["pos"]] + [outcome_code(pso) for pso in data["psos"]]
     po_pso_texts = [po.description for po in data["pos"]] + [pso.description for pso in data["psos"]]
     po_pso_types = ["PO"] * len(data["pos"]) + ["PSO"] * len(data["psos"])
 
     # Build ID lookup
-    po_id_map = {po.po_code: po.id for po in data["pos"]}
-    pso_id_map = {pso.pso_code: pso.id for pso in data["psos"]}
+    po_id_map = {outcome_code(po): po.id for po in data["pos"]}
+    pso_id_map = {outcome_code(pso): pso.id for pso in data["psos"]}
     co_id_map = {co.co_code: co.id for co in data["cos"]}
 
     # Run AI pipeline
     logger.info(f"Generating mappings for subject {subject_id} using {method}")
+    feedback_examples = _feedback_examples(db, data["subject"].framework_id, subject_id)
+    feedback_context = _feedback_context(feedback_examples)
+    combined_context = "\n\n".join(part for part in [context, feedback_context] if part)
     results, validation, metadata = generate_mappings(
         method=method,
         co_codes=co_codes,
@@ -93,8 +107,9 @@ def run_mapping_generation(
         po_pso_codes=po_pso_codes,
         po_pso_texts=po_pso_texts,
         po_pso_types=po_pso_types,
-        context=context,
+        context=combined_context or None,
     )
+    results = _apply_feedback_priors(results, co_codes, co_texts, feedback_examples)
 
     # Clear existing AI mappings for this subject+method
     db.query(AIMappingResult).filter(
@@ -182,6 +197,8 @@ def review_mapping(
     mapping.faculty_decision = FacultyDecision(decision)
     mapping.reviewed_at = datetime.utcnow()
 
+    if final_level is not None and final_level not in {0, 1, 2, 3}:
+        raise ValueError("Mapping level must be between 0 and 3")
     if decision == "edited" and final_level is not None:
         mapping.final_mapping_level = final_level
     elif decision == "accepted":
@@ -359,3 +376,70 @@ def _mapping_to_dict(m: AIMappingResult) -> Dict:
         "faculty_notes": m.faculty_notes,
         "reviewed_at": m.reviewed_at.isoformat() if m.reviewed_at else None,
     }
+
+
+def _feedback_examples(db: Session, framework_id: Optional[int], subject_id: int) -> List[Dict]:
+    """Return teacher-reviewed examples from the same programme framework.
+
+    They are intentionally stored with the mapping record, not as opaque model
+    training data: faculty can audit every example that influenced a suggestion.
+    """
+    if framework_id:
+        reviewed = db.query(AIMappingResult, CourseOutcome).join(
+            CourseOutcome, CourseOutcome.id == AIMappingResult.co_id
+        ).join(Subject, Subject.id == AIMappingResult.subject_id).filter(
+            Subject.framework_id == framework_id,
+            AIMappingResult.faculty_decision.in_([FacultyDecision.EDITED, FacultyDecision.ACCEPTED]),
+        ).order_by(AIMappingResult.reviewed_at.desc()).limit(60).all()
+    else:
+        reviewed = db.query(AIMappingResult, CourseOutcome).join(
+            CourseOutcome, CourseOutcome.id == AIMappingResult.co_id
+        ).filter(
+            AIMappingResult.subject_id == subject_id,
+            AIMappingResult.faculty_decision.in_([FacultyDecision.EDITED, FacultyDecision.ACCEPTED]),
+        ).order_by(AIMappingResult.reviewed_at.desc()).limit(60).all()
+    return [{
+        "co_text": co.description,
+        "outcome_code": mapping.po_pso_code,
+        "level": mapping.final_mapping_level if mapping.final_mapping_level is not None else mapping.mapping_level,
+        "notes": mapping.faculty_notes or "",
+    } for mapping, co in reviewed]
+
+
+def _feedback_context(examples: List[Dict]) -> str:
+    if not examples:
+        return ""
+    lines = ["## Verified faculty feedback to use as calibration examples"]
+    for item in examples[:12]:
+        lines.append(f'- For {item["outcome_code"]}, teachers assigned level {item["level"]} to CO: "{item["co_text"]}". {item["notes"]}')
+    return "\n".join(lines)
+
+
+def _apply_feedback_priors(results, co_codes: List[str], co_texts: List[str], examples: List[Dict]):
+    """Calibrate predictions when an earlier, similar CO was reviewed.
+
+    This is lightweight continual learning: it only acts on a strong lexical
+    match, preserves the explanation trail, and never hides the AI's original
+    judgement. The prompt receives the same examples for semantic reasoning.
+    """
+    text_by_code = dict(zip(co_codes, co_texts))
+    for result in results:
+        current_tokens = set(text_by_code.get(result.co_code, "").lower().split())
+        best = None
+        for example in examples:
+            if example["outcome_code"] != result.po_pso_code:
+                continue
+            prior_tokens = set(example["co_text"].lower().split())
+            similarity = len(current_tokens & prior_tokens) / max(1, len(current_tokens | prior_tokens))
+            if best is None or similarity > best[0]:
+                best = (similarity, example)
+        if best and best[0] >= 0.42:
+            similarity, example = best
+            result.mapping_level = example["level"]
+            result.confidence = max(result.confidence, min(0.95, 0.55 + similarity / 2))
+            result.reason = (
+                f"{result.reason} Calibrated with similar verified faculty feedback "
+                f"for {result.po_pso_code} (text overlap {similarity:.0%})."
+            )
+            result.evidence = list(result.evidence) + ["verified faculty feedback"]
+    return results

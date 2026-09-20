@@ -26,7 +26,7 @@ from ai.validator import validate_mappings, fix_mapping_result, ValidationResult
 logger = logging.getLogger(__name__)
 
 # Default similarity threshold for candidate generation
-DEFAULT_SIMILARITY_THRESHOLD = 0.20
+DEFAULT_SIMILARITY_THRESHOLD = 0.12
 
 
 def generate_mappings_hybrid(
@@ -41,19 +41,6 @@ def generate_mappings_hybrid(
 ) -> Tuple[List[MappingResult], ValidationResult, Dict]:
     """
     Full hybrid pipeline: Embedding → Similarity → LLM → Validation.
-
-    Args:
-        co_codes: List of CO codes (e.g., ["CO1", "CO2", ...])
-        co_texts: List of CO descriptions
-        po_pso_codes: List of PO/PSO codes (e.g., ["PO1", ..., "PSO1", ...])
-        po_pso_texts: List of PO/PSO descriptions
-        po_pso_types: List of types ("PO" or "PSO") for each entry
-        context: Optional course context for LLM
-        similarity_threshold: Min similarity to consider as candidate
-        llm_provider: LLM provider instance (if None, uses default)
-
-    Returns:
-        Tuple of (results, validation_result, metadata)
     """
     if llm_provider is None:
         llm_provider = get_llm_provider()
@@ -70,28 +57,44 @@ def generate_mappings_hybrid(
     logger.info("Step 2: Computing semantic similarity...")
     similarity_matrix = compute_similarity_matrix(co_enhanced, po_enhanced)
 
-    # Step 3: Candidate Generation
+    # Step 3: Candidate Generation (Threshold + Top-K per CO)
     logger.info("Step 3: Identifying candidates...")
     candidates = []
+    candidate_set = set()
     all_results = []
 
+    # Define core accreditation outcomes that must always be evaluated by the LLM
+    CORE_ACCREDITATION_POS = {"PO1", "PO2", "PO3", "PO4", "PO5", "PO7", "PO8", "PO11"}
+
+    # For each CO, include core engineering outcomes plus high-similarity/top-k candidates
     for i, co_code in enumerate(co_codes):
+        sorted_pos = sorted(range(len(po_pso_codes)), key=lambda j: float(similarity_matrix[i][j]), reverse=True)
+        top_k_indices = set(sorted_pos[:4])
+
+        co_verbs = set(co_preprocessed[i].get("action_verbs", []))
+        co_concepts = set(co_preprocessed[i].get("key_concepts", []))
+
         for j, po_pso_code in enumerate(po_pso_codes):
             sim_score = float(similarity_matrix[i][j])
+            po_verbs = set(po_preprocessed[j].get("action_verbs", []))
+            po_concepts = set(po_preprocessed[j].get("key_concepts", []))
 
-            if sim_score >= similarity_threshold:
+            has_keyword_overlap = bool((co_verbs & po_verbs) or (co_concepts & po_concepts))
+            is_core_po = po_pso_code.upper() in CORE_ACCREDITATION_POS or po_pso_code.upper().startswith("PSO")
+
+            if is_core_po or sim_score >= similarity_threshold or j in top_k_indices or (has_keyword_overlap and sim_score >= 0.05):
                 candidates.append((i, j, sim_score))
+                candidate_set.add((i, j))
             else:
-                # Below threshold: assign level 0 without LLM
+                # Below threshold and not in core set: assign level 0
                 all_results.append(MappingResult(
                     co_code=co_code,
                     po_pso_code=po_pso_code,
                     mapping_level=0,
                     confidence=round(max(0.05, 1.0 - sim_score), 2),
                     reason=(
-                        f"Semantic similarity ({sim_score:.2f}) is below the "
-                        f"candidate threshold ({similarity_threshold}). "
-                        f"No meaningful relationship detected."
+                        f"No meaningful correlation detected between course outcome "
+                        f"and {po_pso_code} (similarity: {sim_score:.2f})."
                     ),
                     evidence=[],
                     similarity_score=sim_score,
@@ -102,18 +105,21 @@ def generate_mappings_hybrid(
         f"{len(co_codes) * len(po_pso_codes)} total pairs"
     )
 
+
     # Step 4: LLM Reasoning for candidates
     logger.info("Step 4: LLM reasoning on candidates...")
-    for i, j, sim_score in candidates:
-        result = llm_provider.reason_mapping(
-            co_code=co_codes[i],
-            co_text=co_texts[i],
-            po_pso_code=po_pso_codes[j],
-            po_pso_text=po_pso_texts[j],
-            similarity_score=sim_score,
-            context=context,
-        )
-        all_results.append(result)
+    candidate_dicts = [
+        {
+            "co_code": co_codes[i],
+            "co_text": co_texts[i],
+            "po_pso_code": po_pso_codes[j],
+            "po_pso_text": po_pso_texts[j],
+            "similarity_score": sim_score,
+        }
+        for i, j, sim_score in candidates
+    ]
+    batch_results = llm_provider.reason_candidates_batch(candidate_dicts, context=context)
+    all_results.extend(batch_results)
 
     # Step 5: Validation
     logger.info("Step 5: Validating results...")
