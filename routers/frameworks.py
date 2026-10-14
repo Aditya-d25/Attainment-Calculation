@@ -35,7 +35,10 @@ def list_frameworks(db: Session = Depends(get_db)):
 def create_framework(data: OutcomeFrameworkCreate, db: Session = Depends(get_db)):
     if db.query(OutcomeFramework).filter(OutcomeFramework.name == data.name).first():
         raise HTTPException(status_code=400, detail="A framework with this name already exists")
-    framework = OutcomeFramework(**data.model_dump())
+    payload = data.model_dump()
+    if not payload.get("department"):
+        payload["department"] = "Information Technology"
+    framework = OutcomeFramework(**payload)
     db.add(framework)
     db.commit()
     db.refresh(framework)

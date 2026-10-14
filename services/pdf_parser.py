@@ -1,6 +1,6 @@
 """
 PDF Syllabus Parser — Automatically extracts POs, PSOs, Courses, and COs from University Syllabus PDFs.
-Specifically optimized for SPPU, AICTE, and NEP-2020 engineering curriculum structures.
+Specifically optimized for SPPU, AICTE, and NEP-2020 engineering curriculum structures across all years (FE, SE, TE, BE).
 """
 
 import re
@@ -23,7 +23,6 @@ def clean_word_hyphenation(lines: List[str]) -> str:
         if not stripped:
             continue
         if text.endswith("-"):
-            # Check if last token is an alphabetic word fragment
             parts = text.rsplit(None, 1)
             last_word = parts[-1] if parts else ""
             if len(last_word) > 1 and last_word[:-1].isalpha() and stripped[0].isalpha():
@@ -48,29 +47,33 @@ def extract_text_from_pdf(file_path: str) -> List[Dict[str, any]]:
     return pages_data
 
 
-def parse_pdf_syllabus(file_path: str) -> Dict[str, any]:
+def parse_pdf_syllabus(file_path: str, target_year: Optional[str] = None) -> Dict[str, any]:
     """
     Parses a syllabus PDF to extract:
-    1. Framework Metadata (Title, Department, Academic Year)
+    1. Framework Metadata (Title, Department, Academic Year, Year Level)
     2. Program Outcomes (POs) & Program Specific Outcomes (PSOs)
     3. Courses and their respective Course Outcomes (COs)
     """
     pages_data = extract_text_from_pdf(file_path)
     full_text = "\n".join([p["text"] for p in pages_data])
 
-    # 1. Extract Framework Metadata
-    framework_name = _extract_framework_title(full_text, pages_data)
+    # 1. Detect Year Level (FE, SE, TE, BE)
+    detected_year = _detect_year_level(full_text, pages_data)
+    final_year = target_year if (target_year and target_year.upper() in ["FE", "SE", "TE", "BE"]) else detected_year
+
+    # 2. Extract Framework Metadata
+    framework_name = _extract_framework_title(full_text, pages_data, final_year)
     department = _extract_department(full_text)
     academic_year = _extract_academic_year(full_text)
 
-    # 2. Extract Program Outcomes (POs) & PSOs
+    # 3. Extract Program Outcomes (POs) & PSOs
     pos = _extract_program_outcomes(full_text, pages_data)
 
-    # 3. Extract Courses & Course Outcomes (COs)
-    courses = _extract_courses_and_cos(full_text, pages_data)
+    # 4. Extract Courses & Course Outcomes (COs)
+    courses = _extract_courses_and_cos(full_text, pages_data, final_year)
 
     logger.info(
-        f"Parsed PDF syllabus: Framework='{framework_name}', "
+        f"Parsed PDF syllabus: Framework='{framework_name}', Year='{final_year}', "
         f"POs count={len(pos)}, Courses count={len(courses)}"
     )
 
@@ -78,47 +81,48 @@ def parse_pdf_syllabus(file_path: str) -> Dict[str, any]:
         "framework_name": framework_name,
         "department": department,
         "academic_year": academic_year,
+        "year": final_year,
         "program_outcomes": pos,
         "courses": courses,
     }
 
 
-def _extract_framework_title(full_text: str, pages_data: List[Dict]) -> str:
-    """Extract syllabus title (e.g. Savitribai Phule Pune University - Electronics & Telecommunication Engineering (2024 Pattern))."""
-    p1 = pages_data[0]["text"] if pages_data else ""
-    lines = [line.strip() for line in p1.split("\n") if line.strip()]
+def _detect_year_level(full_text: str, pages_data: List[Dict]) -> str:
+    """Detect whether syllabus is for FE, SE, TE, or BE."""
+    first_pages_text = "\n".join([p["text"] for p in pages_data[:12]])
 
-    univ = ""
-    branch = ""
-    pattern = ""
+    # Look for unambiguous year mentions near the beginning
+    if re.search(r'\b(First\s+Year|F\.?E\.?|Semester\s+[I|1]\b|Semester\s+II\b)\b', first_pages_text, re.IGNORECASE):
+        return "FE"
+    if re.search(r'\b(Second\s+Year|S\.?E\.?|Semester\s+III\b|Semester\s+IV\b)\b', first_pages_text, re.IGNORECASE):
+        return "SE"
+    if re.search(r'\b(Third\s+Year|T\.?E\.?|Semester\s+V\b|Semester\s+VI\b)\b', first_pages_text, re.IGNORECASE):
+        return "TE"
+    if re.search(r'\b(Final\s+Year|Fourth\s+Year|B\.?E\.?|Semester\s+VII\b|Semester\s+VIII\b)\b', first_pages_text, re.IGNORECASE):
+        return "BE"
 
-    for line in lines[:25]:
-        if re.match(r'^(PO\d+|CO\d+|PSO\d+|Course|Unit|Contents|Nomenclature)\b', line, re.IGNORECASE):
-            continue
-        if ("University" in line or "Institute" in line) and not univ:
-            univ = re.sub(r",\s*Pune.*", "", line).strip()
-        elif any(kw in line.lower() for kw in ["engineering", "technology"]) and not ("faculty" in line.lower() or "second year" in line.lower()) and not branch:
-            branch = line.strip()
-        elif ("Pattern" in line or "NEP" in line) and not pattern:
-            pat_match = re.search(r'(\d{4}\s*Pattern|\bNEP[-\s]*2020\b)', line, re.IGNORECASE)
-            if pat_match:
-                pattern = pat_match.group(0).strip()
-            else:
-                pattern = line.strip()
+    return "BE"
 
-    parts = [p for p in [univ, branch] if p]
-    title = " - ".join(parts) if parts else "University Academic Syllabus"
-    if pattern and pattern not in title:
-        title += f" ({pattern})"
-    return title
+
+def _extract_framework_title(full_text: str, pages_data: List[Dict], year_level: str) -> str:
+    """Extract syllabus title (e.g. SPPU - TE Information Technology (2024 Pattern))."""
+    pat_match = re.search(r'(\d{4}\s*Course|\d{4}\s*Pattern|\bNEP[-\s]*2020\b)', full_text, re.IGNORECASE)
+    pattern_str = pat_match.group(0).strip() if pat_match else ("2024 Pattern" if year_level == "TE" else "2019 Course")
+
+    dept = _extract_department(full_text)
+    return f"SPPU - {year_level} {dept} ({pattern_str})"
 
 
 def _extract_department(full_text: str) -> str:
+    if re.search(r'Information\s+Technology', full_text, re.IGNORECASE):
+        return "Information Technology"
+    if re.search(r'Computer\s+Engineering', full_text, re.IGNORECASE):
+        return "Computer Engineering"
     match = re.search(r'(Department of [^\n]+|Faculty of [^\n]+)', full_text, re.IGNORECASE)
     if match:
         dept = match.group(1).strip()
         return re.sub(r'\s+', ' ', dept)
-    return "Electronics & Telecommunication Engineering"
+    return "Information Technology"
 
 
 def _extract_academic_year(full_text: str) -> str:
@@ -128,80 +132,92 @@ def _extract_academic_year(full_text: str) -> str:
     match_fallback = re.search(r'\b(20\d{2}[–\-]\d{2,4})\b', full_text)
     if match_fallback:
         return match_fallback.group(1).strip()
-    return "2025-26"
+    return "2024-25"
 
 
 def _extract_program_outcomes(full_text: str, pages_data: List[Dict]) -> List[Dict[str, str]]:
-    """Extract PO1..PO12 and PSO1..PSO5 from syllabus pages with full titles and descriptions."""
+    """
+    Extract PO1..PO12 and PSO1..PSO4 from syllabus pages with full titles and descriptions.
+    Works for both traditional tabular formats and modern NEP-2020 text structures.
+    """
+    po_text = ""
+    # Collect text from pages that mention POs, PSOs, Graduate Attributes, or specific PO/PSO markers
+    for p in pages_data[:20]:
+        t = p["text"]
+        if re.search(r'Program(?:me)?\s+(?:Specific\s+)?Outcomes|Graduate\s+Attributes|Programme\s+Educational\s+Objectives|\bPOs?\b|\bPSOs?\b|\bPO\s*\d+\b|\bPSO\s*\d+\b', t, re.IGNORECASE):
+            po_text += "\n" + t
+
+    if not po_text.strip():
+        po_text = full_text
+
+    pattern_po = re.compile(r'^\s*(?:[\W\d_]+)?\b(PO\s*\d+|PSO\s*\d+)\b[\s:\-–\.]*(.*)', re.IGNORECASE | re.MULTILINE)
+    lines_po = po_text.split('\n')
     outcomes = []
     seen_codes = set()
 
-    # Search specifically in pages mentioning POs first
-    po_pages_text = ""
-    for p in pages_data:
-        t = p["text"]
-        if re.search(r'Program\s+Outcomes|Programme\s+Outcomes|Graduate\s+Attributes|Programme\s+Educational\s+Objectives|\bPOs\b', t, re.IGNORECASE):
-            po_pages_text += "\n" + t
-
-    if not po_pages_text.strip():
-        po_pages_text = full_text
-
-    lines = po_pages_text.split('\n')
     i = 0
-    while i < len(lines):
-        line = lines[i].strip()
-        match = re.match(r'^(?:[\W\d_]+)?(PO\s*\d+|PSO\s*\d+)\b[\s:\-\–\.]*(.*)', line, re.IGNORECASE)
-        if match:
-            code = re.sub(r'\s+', '', match.group(1).upper())
-            rest = match.group(2).strip()
-            rest = re.sub(r'^[:\-–\s]+', '', rest).strip()
+    while i < len(lines_po):
+        line = lines_po[i].strip()
+        m = pattern_po.match(line)
+        if m:
+            code = re.sub(r'\s+', '', m.group(1).upper())
+            rest = m.group(2).strip()
+            desc_lines = [rest] if rest else []
 
-            desc_parts = [rest] if rest else []
             j = i + 1
-            while j < len(lines):
-                nxt = lines[j].strip()
+            while j < len(lines_po):
+                nxt = lines_po[j].strip()
                 if not nxt:
                     j += 1
                     continue
                 # Stop if next line is another PO or major section boundary
-                if re.match(r'^(?:[\W\d_]+)?(PO\s*\d+|PSO\s*\d+)\b', nxt, re.IGNORECASE) or re.match(r'^(?:[\W\d_]+)?(Course|Unit|Semester|Reference|Contents|General\s+Rules|Guidelines)\b', nxt, re.IGNORECASE):
+                if pattern_po.match(nxt) or re.match(r'^(?:[\W\d_]+)?(Course|Unit|Semester|Reference|Table|Knowledge|Faculty|NEP|Abbreviations)\b', nxt, re.IGNORECASE):
                     break
                 # Skip standalone page numbers or Roman numerals
-                if re.match(r'^\d+$|^[i|v|x]+$', nxt, re.IGNORECASE):
+                if re.match(r'^\d+$|^[ivx]+$', nxt, re.IGNORECASE):
                     j += 1
                     continue
-                desc_parts.append(nxt)
+                desc_lines.append(nxt)
                 j += 1
 
-            full_desc = clean_word_hyphenation(desc_parts)
-            full_desc = re.sub(r'^[:\-–\s]+', '', full_desc).strip()
+            raw_desc = clean_word_hyphenation(desc_lines)
 
-            # Standardize title if present (e.g. "Engineering Knowledge Apply knowledge..." -> "Engineering Knowledge: Apply knowledge...")
-            title_match = re.match(
-                r'^(Engineering Knowledge|Problem Analysis|Design\s*/\s*Development of Solutions|Conduct Investigations of Complex Problems|Engineering Tool Usage|The Engineer and the World|Ethics|Individual and Collaborative Team Work|Communication|Project Management and Finance|Life-Long Learning)\s*(.*)',
-                full_desc,
+            # Clean duplicate titles in description (common in multi-column tables, e.g. "Engineering Knowledge: Engineering Knowledge: Apply ...")
+            clean_desc = re.sub(
+                r'^(?:Engineering\s+knowledge|Problem\s+analysis|Design\s*/\s*Development\s+of\s+Solutions|Conduct\s+Investigations?\s+of\s+Complex\s+Problems|Engineering\s+Tool\s+Usage|Modern\s+Tool\s+Usage|The\s+Engineer\s+and\s+The\s+World|The\s+Engineer\s+and\s+Society|Ethics|Individual\s+and\s+Collaborative\s+Team\s*work|Individual\s+and\s+Team\s*Work|Communication|Communication\s+Skills|Project\s+Management\s+and\s+Finance|Life[- ]Long\s+Learning)\s*',
+                '',
+                raw_desc,
                 flags=re.IGNORECASE
             )
-            if title_match:
-                po_title = title_match.group(1).strip()
-                po_body = title_match.group(2).strip()
-                po_body = re.sub(r'^[:\-–\s]+', '', po_body).strip()
-                full_desc = f"{po_title}: {po_body}" if po_body else po_title
+            clean_desc = re.sub(r'^[:\-–\s]+', '', clean_desc).strip()
 
-            if code not in seen_codes and len(full_desc) > 5:
+            # Format with canonical title prefix if recognized
+            title_m = re.match(
+                r'^(Engineering Knowledge|Problem Analysis|Design\s*/\s*Development of Solutions|Conduct Investigations? of Complex Problems|Engineering Tool Usage|Modern Tool Usage|The Engineer and The World|The Engineer and Society|Ethics|Individual and Collaborative Team work|Individual and Team Work|Communication|Communication Skills|Project Management and Finance|Life[- ]Long Learning)\s*[:\-–]?(.*)',
+                clean_desc,
+                re.IGNORECASE
+            )
+            if title_m:
+                po_title = title_m.group(1).strip()
+                po_body = title_m.group(2).strip()
+                po_body = re.sub(r'^[:\-–\s]+', '', po_body).strip()
+                clean_desc = f"{po_title}: {po_body}" if po_body else po_title
+
+            clean_desc = re.sub(r'^[:\-–\s]+', '', clean_desc).strip()
+
+            if code not in seen_codes and len(clean_desc) > 8:
                 seen_codes.add(code)
-                outcome_type = "PSO" if code.startswith("PSO") else "PO"
+                otype = "PSO" if "PSO" in code else "PO"
                 outcomes.append({
                     "outcome_code": code,
-                    "outcome_type": outcome_type,
-                    "description": full_desc
+                    "outcome_type": otype,
+                    "description": clean_desc
                 })
 
             i = j - 1
         i += 1
 
-
-    # Sort numerically (PO1, PO2, ... PO11)
+    # Sort numerically (PO1, PO2, ..., PSO1, PSO2...)
     outcomes.sort(key=lambda x: (
         x["outcome_type"],
         int(re.search(r'\d+', x["outcome_code"]).group(0)) if re.search(r'\d+', x["outcome_code"]) else 0
@@ -209,167 +225,185 @@ def _extract_program_outcomes(full_text: str, pages_data: List[Dict]) -> List[Di
     return outcomes
 
 
-def _extract_courses_and_cos(full_text: str, pages_data: List[Dict]) -> List[Dict[str, any]]:
+def _extract_courses_and_cos(full_text: str, pages_data: List[Dict], default_year: str = "BE") -> List[Dict[str, any]]:
     """
-    Extract courses (e.g. PCC-201-ETC) and their Course Outcomes (CO1..CO6).
-    Handles flexible hyphenation, spaced course codes (e.g. EEM-283- ETC),
-    and prevents curriculum overview tables from corrupting course names.
+    Extract all courses and their Course Outcomes (COs).
+    Supports:
+    - 2024 NEP-2020 Multi-line headers: 'Course Code: PCC-301-ITT' \n 'Course Name: Operating System'
+    - 2019 SPPU 6-digit codes: '414441: Information Storage and Retrieval'
+    - Hyphenated headers: 'PCC-301-IT - Operating System'
+    - Single-line headers: 'Course Code: 414441 Course Name: ...'
+    - Standard COs (CO1..CO6), hyphenated COs (CO-1..CO-5), and bulleted/numbered outcomes.
     """
     courses = []
+    
+    sem_year_map = {
+        'Semester I': 'FE', 'Semester II': 'FE',
+        'Semester III': 'SE', 'Semester IV': 'SE',
+        'Semester V': 'TE', 'Semester VI': 'TE',
+        'Semester VII': 'BE', 'Semester VIII': 'BE'
+    }
 
-    # Pattern 1: PCC-201-ETC: Electronics Circuits or EEM-283- ETC : Entrepreneurship...
-    header_pattern1 = re.compile(
-        r'\b([A-Z]{2,5}\s*[-–]\s*\d{3}(?:\s*[-–]\s*[A-Z0-9]+)?)\b[\s:\-–]+([^\n]+)',
-        re.IGNORECASE
-    )
+    current_sem = "Semester V" if default_year == "TE" else ("Semester VII" if default_year == "BE" else ("Semester III" if default_year == "SE" else "Semester I"))
 
-    # Pattern 2: Course Code : 204181 Course Name : Digital Electronics
-    header_pattern2 = re.compile(
-        r'Course\s+Code\s*[:\-–]?\s*([A-Z0-9\-]+)\s*Course\s+Name\s*[:\-–]?\s*([^\n]+)',
-        re.IGNORECASE
-    )
-
-    # Pattern 3: CS201: Data Structures
-    header_pattern3 = re.compile(
-        r'\b([A-Z]{2,4}\d{3,4})\b[\s:\-–]+([^\n]+)',
-        re.IGNORECASE
-    )
-
-    current_course = None
-
-    for p in pages_data:
+    for pidx, p in enumerate(pages_data):
         text = p["text"]
-        lines = text.split('\n')
+        
+        # Track semester boundaries
+        sem_m = re.search(r'SEMESTER\s*[-–:]?\s*(VIII|VII|VI|IV|III|II|V|I)\b', text, re.IGNORECASE)
+        if sem_m:
+            current_sem = f"Semester {sem_m.group(1).upper()}"
 
-        for i, line in enumerate(lines):
-            line_str = line.strip()
-            if not line_str:
+        c_code = None
+        c_name = None
+
+        # 1. Multi-line or single-line: Course Code: ... Course Name: ...
+        code_m = re.search(r'Course\s+Code\s*[:\-–]\s*([A-Za-z0-9\s\-]+?)(?=\s+Course\s+Name|\n|$)', text, re.IGNORECASE)
+        name_m = re.search(r'Course\s+Name\s*[:\-–]\s*([^\n]+)', text, re.IGNORECASE)
+        if code_m and name_m:
+            raw_c = code_m.group(1).strip()
+            raw_n = name_m.group(1).strip()
+            clean_c = re.sub(r'\s+', '-', raw_c).replace('--', '-')
+            if not re.search(r'Course|Teaching|Scheme', clean_c, re.IGNORECASE) and len(clean_c) >= 3:
+                c_code = clean_c
+                c_name = raw_n
+
+        # 2. SPPU 6-digit format: 414441: Information Storage and Retrieval
+        if not c_code:
+            sppu_m = re.search(r'^\s*(\b\d{6}[A-Z]?\b)\s*[:\-–]\s*([^\n]+)', text, re.MULTILINE)
+            if sppu_m:
+                c_code = sppu_m.group(1).strip()
+                c_name = sppu_m.group(2).strip()
+
+        # 3. Code-Hyphen-Name: PCC-301-IT - Operating System
+        if not c_code:
+            hyphen_m = re.search(r'^\s*([A-Z]{2,4}\s*[-–]\s*\d{3}[A-Z0-9\s\-]*(?:\s*[-–]\s*[A-Z0-9]+)?)\s*[:\-–]\s*([^\n]+)', text, re.MULTILINE)
+            if hyphen_m:
+                raw_c = hyphen_m.group(1).strip()
+                if not re.match(r'^(NEP|SE|TE|BE|UNIT|PAGE|TABLE)', raw_c, re.IGNORECASE):
+                    c_code = re.sub(r'\s+', '', raw_c)
+                    c_name = hyphen_m.group(2).strip()
+
+        if c_code and c_name:
+            # Clean up course name
+            clean_name = re.split(
+                r'\b(Teaching\s+Scheme|Credit|Examination|Prerequisite|Credits|Course\s+Objectives)\b',
+                c_name,
+                flags=re.IGNORECASE
+            )[0].strip()
+            clean_name = re.sub(r'^[:\-–\s]+', '', clean_name).strip()
+            clean_name = re.sub(
+                r'^(Program\s+Core\s+Course(?:-Lab)?|Multi[\s\-]?disciplinary\s+Minor(?:-Lab)?|Open\s+Elective(?:\s*-\s*[I|V|X\d]+)?|Value\s+Education(?:-Lab)?|Vocational\s+and\s+Skill\s+Enhancement\s+Course|Ability\s+Enhancement\s+Course)\s*[:\-–]?\s*',
+                '',
+                clean_name,
+                flags=re.IGNORECASE
+            ).strip()
+
+            # Ignore table of contents / syllabus summary lines
+            if re.search(r'\d+\s+[-–\d]+\s+[-–\d]+\s+\d{2,3}', clean_name) or len(clean_name) <= 2:
                 continue
 
-            code_raw = None
-            name_raw = None
+            # Resolve year
+            year = sem_year_map.get(current_sem, default_year)
 
-            # Check Match Pattern 2
-            m2 = header_pattern2.search(line_str)
-            if m2:
-                code_raw = m2.group(1).upper()
-                name_raw = m2.group(2).strip()
-            else:
-                # Check Match Pattern 1
-                m1 = header_pattern1.search(line_str)
-                if m1:
-                    code_raw = m1.group(1).upper().strip()
-                    name_raw = m1.group(2).strip()
+            # Extract COs specifically from the Course Outcomes section or current page
+            cos = _extract_cos_from_page(text)
+
+            # Check next page if no COs found on this page (sometimes course header is on p1 and COs on p2)
+            if not cos and pidx + 1 < len(pages_data):
+                next_text = pages_data[pidx + 1]["text"]
+                # Only check next page if next page is NOT a new course
+                if not re.search(r'Course\s+Code\s*[:\-–]|^\s*\b\d{6}[A-Z]?\b\s*[:\-–]', next_text, re.MULTILINE):
+                    cos = _extract_cos_from_page(next_text)
+
+            # Disambiguate duplicate elective codes (e.g. 414444 Mobile Computing vs HPC)
+            unique_code = c_code
+            if any(c["course_code"] == unique_code for c in courses):
+                sub_match = re.search(r'\(([^)]+)\)', clean_name)
+                if sub_match:
+                    sub_text = sub_match.group(1)
+                    abbr = ''.join([w[0] for w in sub_text.split() if w[0].isalnum()]).upper()
+                    cand_code = f"{c_code}-{abbr}"
                 else:
-                    m3 = header_pattern3.search(line_str)
-                    if m3:
-                        code_raw = m3.group(1).upper().strip()
-                        name_raw = m3.group(2).strip()
+                    cand_code = f"{c_code}-2"
+                counter = 1
+                while any(c["course_code"] == cand_code for c in courses):
+                    counter += 1
+                    cand_code = f"{c_code}-{counter}"
+                unique_code = cand_code
 
-            if code_raw and name_raw:
-                # Normalize code: remove internal spaces, normalize hyphens
-                norm_code = re.sub(r'\s+', '', code_raw).replace('–', '-')
+            courses.append({
+                "course_code": unique_code,
+                "course_name": clean_name,
+                "year": year,
+                "semester": current_sem,
+                "division": "All",
+                "course_outcomes": cos
+            })
 
-                # Filter out non-course codes
-                if not re.match(r'^(NEP|SE|TE|BE|LEVEL|PAGE|TABLE|UNIT|AY|AY-20\d\d)', norm_code):
-                    # Clean up course name
-                    clean_name = re.sub(
-                        r'[\s:\-–]*(Teaching\s+Scheme|Credits|Semester|Level|Hours|Marks|Examination).*',
-                        '', name_raw, flags=re.IGNORECASE
-                    ).strip()
-                    # Strip residual code prefix e.g. "ETC : " or "- ETC -"
-                    clean_name = re.sub(r'^[A-Z]{2,4}\s*[:\-–]+\s*', '', clean_name)
-                    clean_name = re.sub(r'^[:\-–\s]+', '', clean_name).strip()
+    # Filter to courses with extracted Course Outcomes
+    valid_courses = [c for c in courses if len(c["course_outcomes"]) > 0]
+    return valid_courses if valid_courses else courses
 
-                    # Avoid summary table rows that contain long series of digits/grades (e.g. 3 - - 30 70 - - - 100 3 - - 3)
-                    is_table_row = bool(re.search(r'\d+\s+[-–\d]+\s+[-–\d]+\s+\d{2,3}', clean_name))
 
-                    # Check if this line looks like an authoritative course header on a course page
-                    is_authoritative_page = False
-                    for look_ahead in lines[i+1:i+5]:
-                        if re.search(r'(Teaching\s+Scheme|Credits|Examination\s+Scheme|Prerequisite|Course\s+Objectives|Course\s+Outcomes)', look_ahead, re.IGNORECASE):
-                            is_authoritative_page = True
-                            break
+def _extract_cos_from_page(page_text: str) -> List[Dict[str, str]]:
+    """
+    Extracts COs (CO1..CO6) from a page's text.
+    Handles explicit CO labels as well as bulleted/numbered lists under Course Outcomes.
+    """
+    cos = []
+    
+    # Isolate Course Outcomes block to prevent matching mapping tables / unit contents
+    co_sec = re.search(
+        r'Course\s+Outcomes\s*[:\-–]?(.*?)(?=COURSE\s+CONTENTS|Course\s+Contents|Guidelines|Unit\s+No|Unit\s+I\b|Learning\s+Resources|Books|$)',
+        page_text,
+        re.DOTALL | re.IGNORECASE
+    )
+    search_scope = co_sec.group(1) if co_sec else page_text
 
-                    if is_authoritative_page or not is_table_row:
-                        # Clean further if table row remnants
-                        clean_name = re.sub(r'\s+\d+\s+[-–\d]+.*$', '', clean_name).strip()
-                        # Also strip "Program Core Course - ", "Program Core Course", etc.
-                        clean_name = re.sub(
-                            r'^(Program\s+Core\s+Course(?:-Lab)?|Multi[\s\-]?disciplinary\s+Minor(?:-Lab)?|Open\s+Elective(?:\s*-\s*[I|V|X\d]+)?|Value\s+Education(?:-Lab)?|Vocational\s+and\s+Skill\s+Enhancement\s+Course|Ability\s+Enhancement\s+Course)\s*[:\-–]?\s*',
-                            '', clean_name, flags=re.IGNORECASE
-                        ).strip()
+    lines = [l.strip() for l in search_scope.split('\n') if l.strip()]
+    curr_code = None
+    curr_parts = []
+    
+    co_pat = re.compile(r'^(?:[^\w\s]|[\uf0b7\u25cf\u2022\*\-–\d\.\s])*\b(CO[\s\-–\.]*\d+)\b[\s:\-–\.]*(.*)', re.IGNORECASE)
 
-                        if clean_name and len(clean_name) > 2 and not clean_name.lower().startswith("course"):
-                            existing = next((c for c in courses if c["course_code"] == norm_code), None)
-                            if not existing:
-                                current_course = {
-                                    "course_code": norm_code,
-                                    "course_name": clean_name,
-                                    "semester": None,
-                                    "course_outcomes": []
-                                }
-                                courses.append(current_course)
-                            else:
-                                current_course = existing
-                                # Update name if this is the authoritative course page or cleaner
-                                if is_authoritative_page or len(clean_name) < len(existing["course_name"]):
-                                    existing["course_name"] = clean_name
+    for line in lines:
+        clean_l = re.sub(r'^[^\w\s]+', '', line).strip()
+        if clean_l.lower().startswith(('on completion of', 'after successful completion', 'upon successful completion', 'learners are expected')):
+            continue
+        m = co_pat.match(line)
+        if m:
+            if curr_code and curr_parts:
+                cos.append({
+                    "co_code": curr_code,
+                    "description": clean_word_hyphenation(curr_parts)
+                })
+            curr_code = re.sub(r'[\s\-–\.]+', '', m.group(1).upper())
+            rest = m.group(2).strip()
+            curr_parts = [rest] if rest else []
+        elif curr_code:
+            # Stop if encountering unit or section marker
+            if re.match(r'^(?:Unit\s+No|Unit\s+[IVX\d]+|Guidelines|Exemplars?|Part\s+[A-Z\d]|Course\s+Contents)\b', clean_l, re.IGNORECASE):
+                break
+            curr_parts.append(line)
 
-            # Look for CO lines: CO1: ... or 1. CO1 - ... or • CO1: ... or • CO1. ... (allow description on same line or next line)
-            co_match = re.match(r'^(?:[\W\d_]+)?(CO\s*\d+)\b[\s:\-\–\.]*(.*)', line_str, re.IGNORECASE)
-            if co_match and current_course:
-                co_code = re.sub(r'\s+', '', co_match.group(1).upper())
-                co_desc_same_line = co_match.group(2).strip()
-                co_desc_same_line = re.sub(r'^[:\-–\s]+', '', co_desc_same_line).strip()
+    if curr_code and curr_parts:
+        cos.append({
+            "co_code": curr_code,
+            "description": clean_word_hyphenation(curr_parts)
+        })
 
-                # Collect continuation lines
-                j = i + 1
-                desc_lines = [co_desc_same_line] if co_desc_same_line else []
-                while j < len(lines):
-                    nxt = lines[j].strip()
-                    if not nxt:
-                        j += 1
-                        continue
+    # If no explicit CO prefix was found, try bullet/number splitting under Course Outcomes
+    if not cos and co_sec:
+        items = re.split(r'\n\s*(?:[^\w\s\n]|[\uf0b7\u25cf\u2022\*\-–]|(?:CO[\s\-–\.]*)?\d+[\.:\)\-–])\s*', '\n' + search_scope)
+        valid_items = [
+            clean_word_hyphenation([it]) for it in items
+            if len(it.strip()) > 15 and not re.sub(r'^[^\w\s]+', '', it).strip().lower().startswith(('on completion', 'after successful', 'upon successful', 'course outcomes'))
+        ]
+        for idx, it in enumerate(valid_items, 1):
+            cos.append({
+                "co_code": f"CO{idx}",
+                "description": it
+            })
 
-                    # Stop if next line is another CO
-                    if re.match(r'^(?:[\W\d_]+)?CO\s*\d+\b', nxt, re.IGNORECASE):
-                        break
-
-                    # Stop if next line is a major section header
-                    if re.match(
-                        r'^(?:[\W\d_]+)?(Course\s+Contents|Contents|Unit\s+[IVX\d]+|Tutorial|Laboratory|Practical|Experiments|Suggested\s+List|List\s+of|Part\s+[A-Z\d]|Section\s+[A-Z\d]|Mapping\s+of|Prerequisite|Companion|Learning\s+Resources|Textbooks|Reference\s+Books|Books|MOOC|Web\s+Resources|Guidelines|Exemplar|Teaching\s+Scheme|Examination\s+Scheme|Credits)\b',
-                        nxt,
-                        re.IGNORECASE
-                    ):
-                        break
-
-                    # Skip standalone page numbers or Roman numerals
-                    if re.match(r'^\d+$|^[i|v|x]+$', nxt, re.IGNORECASE):
-                        j += 1
-                        continue
-
-                    desc_lines.append(nxt)
-                    j += 1
-
-                full_co_desc = clean_word_hyphenation(desc_lines)
-                full_co_desc = re.sub(r'^[:\-–\s]+', '', full_co_desc).strip()
-                # Clean off accidental trailing tutorial/lab/course content text
-                full_co_desc = re.split(r'\b(?:Tutorial\s+shall|Laboratory\s+Assignments|Suggested\s+List|Course\s+Contents|List\s+of\s+Practical)\b', full_co_desc, flags=re.IGNORECASE)[0].strip()
-
-                # Avoid duplicate CO entries
-                existing_co = next((c for c in current_course["course_outcomes"] if c["co_code"] == co_code), None)
-                if not existing_co:
-                    if len(full_co_desc) > 3:
-                        current_course["course_outcomes"].append({
-                            "co_code": co_code,
-                            "description": full_co_desc
-                        })
-                else:
-                    # If existing description was very brief, replace with fuller one
-                    if len(full_co_desc) > len(existing_co["description"]) + 10:
-                        existing_co["description"] = full_co_desc
-
-    # Return courses that contain COs (or all if none yet)
-    courses_with_cos = [c for c in courses if len(c["course_outcomes"]) > 0]
-    return courses_with_cos if courses_with_cos else courses
+    return cos

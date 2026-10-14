@@ -1,17 +1,24 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Outcome Studio — CO-PO Mapping Agent</title>
+  <title>CO-PO Mapping Agent</title>
   <link rel="stylesheet" href="/static/style.css?v=2.2">
 </head>
+
 <body>
 
   <header class="topbar">
-    <a class="brand" href="#">◈ Outcome Studio</a>
+    <a class="brand" href="#">◈ CO-PO Mapping Agent</a>
     <p>Automated CO-PO Syllabus Extraction & AI Mapping</p>
-    <div id="mode-badge" class="status">Connecting…</div>
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <button id="clear-db-btn" class="button danger small" title="Clear all courses, outcomes, and mappings from database">
+        🗑 Clear Database
+      </button>
+      <div id="mode-badge" class="status">Connecting…</div>
+    </div>
   </header>
 
   <main>
@@ -41,9 +48,9 @@
         <p class="eyebrow">AUTOMATED ACADEMIC CURRICULUM EXTRACTOR</p>
         <h1>Upload Syllabus PDF.<br><em>Extract COs & POs automatically.</em></h1>
         <p class="lead">
-          Upload any engineering syllabus PDF (e.g. Savitribai Phule Pune University NEP-2020 curriculum). 
-          Program Outcomes (POs) and course-wise Course Outcomes (COs) are automatically extracted. 
-          Select any course to view, edit, or adjust outcomes, and proceed towards explainable AI CO-PO matrix generation.
+          Upload any engineering syllabus PDF (e.g. SPPU TE 2024 NEP-2020 or BE 2019 curriculum).
+          Program Outcomes (POs/PSOs) and course-wise Course Outcomes (COs) are automatically extracted year-wise.
+          Manage all four academic years (FE, SE, TE, BE) seamlessly with one clean platform.
         </p>
       </div>
 
@@ -52,14 +59,27 @@
         <div class="upload-header">
           <span class="upload-icon">📄</span>
           <h3>Upload Syllabus PDF</h3>
-          <p class="muted">Extracts shared POs/PSOs & all courses with their COs</p>
+          <p class="muted">Extracts shared POs/PSOs & all courses with their COs year-wise</p>
         </div>
-        
-        <form id="pdf-upload-form" class="upload-form" onsubmit="event.preventDefault(); handlePDFUpload(event); return false;">
+
+        <form id="pdf-upload-form" class="upload-form"
+          onsubmit="event.preventDefault(); handlePDFUpload(event); return false;">
           <div class="file-drop-area" id="drop-area">
             <input type="file" id="pdf-file-input" accept=".pdf" />
             <span class="file-msg" id="file-label">Click or drag & drop syllabus PDF here</span>
           </div>
+
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 8px;">
+            <label for="upload-year-target" style="font-size: 13px; font-weight: 600; color: #374151;">Target Academic Year:</label>
+            <select id="upload-year-target" style="padding: 6px 10px; border-radius: 6px; border: 1px solid var(--line); font-size: 13px; font-weight: 600;">
+              <option value="auto">Auto-Detect from PDF</option>
+              <option value="FE">FE (First Year)</option>
+              <option value="SE">SE (Second Year)</option>
+              <option value="TE">TE (Third Year)</option>
+              <option value="BE">BE (Final Year)</option>
+            </select>
+          </div>
+
           <button type="button" id="upload-btn" onclick="handlePDFUpload(event)" class="button primary block">
             Extract POs & COs from PDF
           </button>
@@ -72,15 +92,35 @@
     <section class="selector-section">
       <div class="selector-card">
         <div class="selector-info">
-          <span class="section-kicker">SELECT COURSE FOR OUTCOME REVIEW & MAPPING</span>
-          <h2 id="current-framework-name">Framework: Upload Syllabus PDF to extract outcomes</h2>
-          <p id="current-framework-details" class="muted">Academic Year: 2025-26 | Department: E&TC</p>
+          <span class="section-kicker">DEPARTMENT OF INFORMATION TECHNOLOGY — CO-PO MAPPING & ATTAINMENT</span>
+          <h2 id="current-framework-name">Framework: SPPU - BE Information Technology (2019 Course)</h2>
+          <p id="current-framework-details" class="muted">Department: Information Technology | 4 Years (FE, SE, TE, BE) & 2 Divisions (A & B)</p>
         </div>
-        <div class="selector-control">
-          <label for="course-select"><b>Select Course from List:</b></label>
-          <select id="course-select">
-            <option value="">-- Upload PDF or Select a Course --</option>
-          </select>
+        <div class="selector-control selector-filters-row">
+          <div class="filter-item">
+            <label for="filter-year"><b>Year:</b></label>
+            <select id="filter-year">
+              <option value="All">All Years</option>
+              <option value="FE">FE (1st Year)</option>
+              <option value="SE">SE (2nd Year)</option>
+              <option value="TE">TE (3rd Year)</option>
+              <option value="BE" selected>BE (Final Year)</option>
+            </select>
+          </div>
+          <div class="filter-item">
+            <label for="filter-division"><b>Division:</b></label>
+            <select id="filter-division">
+              <option value="All" selected>All (Div A & B)</option>
+              <option value="A">Division A</option>
+              <option value="B">Division B</option>
+            </select>
+          </div>
+          <div class="filter-item course-item">
+            <label for="course-select"><b>Select Course:</b></label>
+            <select id="course-select">
+              <option value="">-- Upload PDF or Select a Course --</option>
+            </select>
+          </div>
         </div>
       </div>
     </section>
@@ -94,13 +134,14 @@
 
     <!-- PAGE 1: OUTCOMES & MANAGEMENT -->
     <section id="outcomes-tab" class="page active">
-      
+
       <!-- PROCEED CALL-TO-ACTION BANNER -->
       <div class="proceed-banner">
         <div class="proceed-info">
           <h3 id="selected-course-banner-title">Select a course to view and edit outcomes</h3>
           <p id="selected-course-banner-sub" class="muted">
-            Verify and customize the extracted Course Outcomes (COs) and Program Outcomes (POs) below. When ready, click to proceed towards generating the CO-PO mapping matrix.
+            Verify and customize the extracted Course Outcomes (COs) and Program Outcomes (POs) below. When ready, click
+            to proceed towards generating the CO-PO mapping matrix.
           </p>
         </div>
         <button id="proceed-matrix-btn" class="button primary large proceed-cta">
@@ -109,7 +150,7 @@
       </div>
 
       <div class="grid two">
-        
+
         <!-- COURSE OUTCOMES (COs) -->
         <article class="card">
           <div class="card-header">
@@ -166,14 +207,16 @@
         <div>
           <span class="section-kicker">AI MAPPING & FACULTY CALIBRATION</span>
           <h2 id="matrix-course-title">Mapping Matrix</h2>
-          <p class="muted">Click any cell for AI reasoning & evidence. Double-click to override mapping level with audit rationale.</p>
+          <p class="muted">Click any cell for AI reasoning & evidence. Double-click to override mapping level with audit
+            rationale.</p>
         </div>
         <div class="matrix-actions">
           <button id="back-outcomes-btn" class="button secondary">← Edit Outcomes</button>
           <button id="generate-btn" class="button primary">Generate Mapping Matrix ⟳</button>
         </div>
       </div>
-      <div id="matrix-empty" class="empty">Please select a course and verify COs/POs to generate the mapping matrix.</div>
+      <div id="matrix-empty" class="empty">Please select a course and verify COs/POs to generate the mapping matrix.
+      </div>
       <div id="matrix-wrap"></div>
     </section>
 
@@ -183,7 +226,8 @@
         <div>
           <span class="section-kicker">EXPORT TO EXCEL</span>
           <h2>Download Approved CO-PO Matrix</h2>
-          <p>Generates an official Excel workbook with mapping levels, AI reasoning explanations, and faculty audit trail.</p>
+          <p>Generates an official Excel workbook with mapping levels, AI reasoning explanations, and faculty audit
+            trail.</p>
         </div>
         <button id="export-button" class="button primary">Download Excel (.xlsx)</button>
       </article>
@@ -213,7 +257,7 @@
       <button type="button" id="outcome-modal-close" class="x">×</button>
       <span class="section-kicker" id="outcome-modal-kicker">EDIT OUTCOME</span>
       <h2 id="outcome-modal-title">Outcome Details</h2>
-      
+
       <!-- Type selector for POs -->
       <div id="modal-type-group" style="display:none;">
         <label>Outcome Type
@@ -227,7 +271,7 @@
       <label>Code
         <input id="modal-outcome-code" required placeholder="e.g. CO1 or PO1">
       </label>
-      
+
       <label>Description
         <textarea id="modal-outcome-desc" rows="5" required placeholder="Outcome description text..."></textarea>
       </label>
@@ -267,4 +311,5 @@
 
   <script src="/static/app.js?v=2.2"></script>
 </body>
+
 </html>

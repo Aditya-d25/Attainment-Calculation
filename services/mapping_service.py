@@ -373,7 +373,7 @@ def _mapping_to_dict(m: AIMappingResult) -> Dict:
         "reason": m.reason,
         "evidence": json.loads(m.evidence) if m.evidence else [],
         "method": m.method,
-        "faculty_decision": m.faculty_decision.value if m.faculty_decision else "pending",
+        "faculty_decision": m.faculty_decision.value if hasattr(m.faculty_decision, "value") else str(m.faculty_decision or "pending"),
         "final_mapping_level": m.final_mapping_level,
         "faculty_notes": m.faculty_notes,
         "reviewed_at": m.reviewed_at.isoformat() if m.reviewed_at else None,

@@ -99,7 +99,9 @@ def test_course_co_edit_and_remove():
 
 
 def test_sppu_syllabus_upload_and_mapping():
-    pdf_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads", "SPPU_SE_ETC_2024_Syllabus.pdf")
+    pdf_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads", "sample_sppu_syllabus.pdf")
+    if not os.path.exists(pdf_path):
+        pdf_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads", "SPPU_SE_ETC_2024_Syllabus.pdf")
     assert os.path.exists(pdf_path), "Test syllabus PDF should exist"
 
     with open(pdf_path, "rb") as f:
@@ -161,3 +163,33 @@ def test_sppu_syllabus_upload_and_mapping():
         assert m["mapping_level"] in [0, 1, 2, 3]
         assert "confidence" in m
         assert "reason" in m
+
+
+def test_te_and_be_syllabus_parsing():
+    from services.pdf_parser import parse_pdf_syllabus
+    uploads_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
+
+    # 1. Test TE Syllabus
+    te_pdf = os.path.join(uploads_dir, "38550ce6_TE-2024 Information Technology Syllabus.pdf")
+    if os.path.exists(te_pdf):
+        res_te = parse_pdf_syllabus(te_pdf)
+        assert res_te["year"] == "TE"
+        assert "Information Technology" in res_te["department"]
+        assert len(res_te["program_outcomes"]) >= 12
+        assert len(res_te["courses"]) >= 20
+        # Check that courses have COs
+        for c in res_te["courses"][:5]:
+            assert len(c["course_outcomes"]) >= 3
+
+    # 2. Test BE Syllabus
+    be_pdf = os.path.join(uploads_dir, "82464407_Information_Technology_Final_Year_Syllabus_2019.pdf")
+    if os.path.exists(be_pdf):
+        res_be = parse_pdf_syllabus(be_pdf)
+        assert res_be["year"] == "BE"
+        assert "Information Technology" in res_be["department"]
+        assert len(res_be["program_outcomes"]) >= 12
+        assert len(res_be["courses"]) >= 20
+        # Check that courses have COs
+        for c in res_be["courses"][:5]:
+            assert len(c["course_outcomes"]) >= 3
+
