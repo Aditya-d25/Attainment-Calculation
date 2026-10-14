@@ -4,7 +4,7 @@ Subject, Course Outcome, Program Outcome, and PSO API routes.
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 
 from database import SessionLocal
 from models import Subject, CourseOutcome, ProgramOutcome, ProgramSpecificOutcome, OutcomeFramework, FrameworkOutcome, AIMappingResult
@@ -46,8 +46,41 @@ def create_subject(data: SubjectCreate, db: Session = Depends(get_db)):
 
 
 @router.get("", response_model=List[SubjectResponse])
-def list_subjects(db: Session = Depends(get_db)):
-    return db.query(Subject).all()
+def list_subjects(
+    year: Optional[str] = None,
+    division: Optional[str] = None,
+    framework_id: Optional[int] = None,
+    db: Session = Depends(get_db)
+):
+    query = db.query(Subject)
+    if framework_id:
+        query = query.filter(Subject.framework_id == framework_id)
+    if year and year != "All":
+        query = query.filter(Subject.year == year)
+    if division and division != "All":
+        query = query.filter((Subject.division == division) | (Subject.division == "All") | (Subject.division == "A, B"))
+    return query.all()
+
+
+@router.get("/divisions/list")
+def list_divisions(db: Session = Depends(get_db)):
+    from models import AcademicDivision
+    divs = db.query(AcademicDivision).order_by(AcademicDivision.year, AcademicDivision.division).all()
+    if not divs:
+        default_divs = []
+        for yr in ["FE", "SE", "TE", "BE"]:
+            for d in ["A", "B"]:
+                div_obj = AcademicDivision(
+                    year=yr,
+                    division=d,
+                    class_name=f"{yr}-IT-{d}",
+                    department="Information Technology"
+                )
+                db.add(div_obj)
+                default_divs.append(div_obj)
+        db.commit()
+        divs = db.query(AcademicDivision).order_by(AcademicDivision.year, AcademicDivision.division).all()
+    return divs
 
 
 @router.get("/{subject_id}", response_model=SubjectResponse)
@@ -79,7 +112,8 @@ def create_co(subject_id: int, data: CourseOutcomeCreate, db: Session = Depends(
     if not subject:
         raise HTTPException(status_code=404, detail="Subject not found")
 
-    co = CourseOutcome(subject_id=subject_id, **data.dict())
+    payload = data.model_dump() if hasattr(data, "model_dump") else data.dict()
+    co = CourseOutcome(subject_id=subject_id, **payload)
     db.add(co)
     db.commit()
     db.refresh(co)
@@ -145,7 +179,8 @@ def create_po(subject_id: int, data: ProgramOutcomeCreate, db: Session = Depends
     if not subject:
         raise HTTPException(status_code=404, detail="Subject not found")
 
-    po = ProgramOutcome(subject_id=subject_id, **data.dict())
+    payload = data.model_dump() if hasattr(data, "model_dump") else data.dict()
+    po = ProgramOutcome(subject_id=subject_id, **payload)
     db.add(po)
     db.commit()
     db.refresh(po)
@@ -167,7 +202,8 @@ def create_pos_batch(
 
     pos = []
     for item in data:
-        po = ProgramOutcome(subject_id=subject_id, **item.dict())
+        payload = item.model_dump() if hasattr(item, "model_dump") else item.dict()
+        po = ProgramOutcome(subject_id=subject_id, **payload)
         db.add(po)
         pos.append(po)
 
@@ -203,7 +239,8 @@ def create_pso(subject_id: int, data: PSOCreate, db: Session = Depends(get_db)):
     if not subject:
         raise HTTPException(status_code=404, detail="Subject not found")
 
-    pso = ProgramSpecificOutcome(subject_id=subject_id, **data.dict())
+    payload = data.model_dump() if hasattr(data, "model_dump") else data.dict()
+    pso = ProgramSpecificOutcome(subject_id=subject_id, **payload)
     db.add(pso)
     db.commit()
     db.refresh(pso)
@@ -227,7 +264,8 @@ def create_psos_batch(
 
     psos = []
     for item in data:
-        pso = ProgramSpecificOutcome(subject_id=subject_id, **item.dict())
+        payload = item.model_dump() if hasattr(item, "model_dump") else item.dict()
+        pso = ProgramSpecificOutcome(subject_id=subject_id, **payload)
         db.add(pso)
         psos.append(pso)
 

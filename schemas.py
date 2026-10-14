@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 from enum import Enum
 from datetime import datetime
@@ -28,9 +28,11 @@ class MappingMethodEnum(str, Enum):
 class SubjectCreate(BaseModel):
     course_code: str
     course_name: str
+    year: Optional[str] = "BE"
     semester: Optional[str] = None
+    division: Optional[str] = "All"
     academic_year: Optional[str] = None
-    department: Optional[str] = None
+    department: Optional[str] = "Information Technology"
     theory_enabled: bool = True
     description: Optional[str] = None
     framework_id: Optional[int] = None
@@ -40,16 +42,17 @@ class SubjectResponse(BaseModel):
     id: int
     course_code: str
     course_name: str
-    semester: Optional[str]
-    academic_year: Optional[str]
-    department: Optional[str]
-    theory_enabled: bool
-    description: Optional[str]
+    year: Optional[str] = "BE"
+    semester: Optional[str] = None
+    division: Optional[str] = "All"
+    academic_year: Optional[str] = None
+    department: Optional[str] = "Information Technology"
+    theory_enabled: bool = True
+    description: Optional[str] = None
     framework_id: Optional[int] = None
     co_count: Optional[int] = 0
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # -------------------------
@@ -68,8 +71,7 @@ class OutcomeFrameworkResponse(BaseModel):
     department: Optional[str] = None
     description: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class FrameworkOutcomeCreate(BaseModel):
@@ -82,8 +84,7 @@ class FrameworkOutcomeResponse(FrameworkOutcomeCreate):
     id: int
     framework_id: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # -------------------------
@@ -112,8 +113,7 @@ class CourseOutcomeResponse(BaseModel):
     univ_attainment: Optional[float] = 0.0
     internal_attainment: Optional[float] = 0.0
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # -------------------------
@@ -131,8 +131,7 @@ class ProgramOutcomeResponse(BaseModel):
     po_code: str
     description: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # -------------------------
@@ -150,8 +149,7 @@ class PSOResponse(BaseModel):
     pso_code: str
     description: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # -------------------------
@@ -190,8 +188,7 @@ class MappingResultResponse(BaseModel):
     faculty_notes: Optional[str]
     reviewed_at: Optional[datetime]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MappingMatrixCell(BaseModel):
@@ -255,8 +252,7 @@ class EvaluationResultResponse(BaseModel):
     confusion_matrix: Optional[str]
     classification_report: Optional[str]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ComparisonResultResponse(BaseModel):

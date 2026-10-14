@@ -5,11 +5,16 @@ PDF Upload and Syllabus Extraction Router.
 import os
 import uuid
 import logging
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
+from typing import Optional
 
 from database import SessionLocal
-from models import OutcomeFramework, FrameworkOutcome, Subject, CourseOutcome
+from models import (
+    OutcomeFramework, FrameworkOutcome, Subject, CourseOutcome,
+    AIMappingResult, ReferenceMappingEntry, MappingEvaluation, Document,
+    ProgramOutcome, ProgramSpecificOutcome
+)
 from services.pdf_parser import parse_pdf_syllabus
 
 logger = logging.getLogger(__name__)
@@ -26,13 +31,17 @@ def get_db():
 
 
 @router.post("/upload")
-async def upload_syllabus_pdf(file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload_syllabus_pdf(
+    file: UploadFile = File(...),
+    year: Optional[str] = Form(None),
+    db: Session = Depends(get_db)
+):
     """
     Upload a single syllabus PDF containing POs and COs for multiple courses.
     Automatically extracts:
     - Shared Program Outcomes (POs / PSOs)
     - Courses and their Course Outcomes (COs)
-    Saves them into the database framework & subjects structure.
+    Saves them into the database framework & subjects structure year-wise.
     """
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files (.pdf) are supported")
@@ -52,7 +61,7 @@ async def upload_syllabus_pdf(file: UploadFile = File(...), db: Session = Depend
         raise HTTPException(status_code=500, detail="Failed to save uploaded file")
 
     try:
-        parsed_data = parse_pdf_syllabus(file_path)
+        parsed_data = parse_pdf_syllabus(file_path, target_year=year)
     except Exception as e:
         logger.error(f"Error parsing PDF syllabus: {str(e)}")
         raise HTTPException(status_code=400, detail=f"Failed to extract syllabus data from PDF: {str(e)}")
@@ -65,20 +74,21 @@ async def upload_syllabus_pdf(file: UploadFile = File(...), db: Session = Depend
 
     framework_name = parsed_data["framework_name"]
     department = parsed_data["department"]
+    year_level = parsed_data.get("year", "BE")
 
-    # 1. Create or retrieve OutcomeFramework
+    # 1. Create or retrieve OutcomeFramework for this specific syllabus
     framework = db.query(OutcomeFramework).filter(OutcomeFramework.name == framework_name).first()
     if not framework:
         framework = OutcomeFramework(
             name=framework_name,
             department=department,
-            description=f"Auto-extracted from {file.filename} (Academic Year: {parsed_data['academic_year']})"
+            description=f"Auto-extracted {year_level} syllabus from {file.filename} (Academic Year: {parsed_data['academic_year']})"
         )
         db.add(framework)
         db.commit()
         db.refresh(framework)
 
-    # 2. Update Framework Outcomes (POs and PSOs)
+    # 2. Update Framework Outcomes (POs and PSOs) dynamically from PDF
     if parsed_data["program_outcomes"]:
         db.query(FrameworkOutcome).filter(FrameworkOutcome.framework_id == framework.id).delete()
         new_outcomes = []
@@ -93,17 +103,23 @@ async def upload_syllabus_pdf(file: UploadFile = File(...), db: Session = Depend
         db.add_all(new_outcomes)
         db.commit()
 
-    # 3. Process Courses & COs
+    # 3. Process Courses & COs year-wise
     saved_courses = []
     for c_data in parsed_data["courses"]:
         code = c_data["course_code"]
         name = c_data["course_name"]
+        c_year = c_data.get("year", year_level)
+        semester = c_data.get("semester", "Semester VII")
+        division = c_data.get("division", "All")
 
         subject = db.query(Subject).filter(Subject.course_code == code).first()
         if not subject:
             subject = Subject(
                 course_code=code,
                 course_name=name,
+                year=c_year,
+                semester=semester,
+                division=division,
                 framework_id=framework.id,
                 department=department,
                 academic_year=parsed_data["academic_year"]
@@ -113,12 +129,14 @@ async def upload_syllabus_pdf(file: UploadFile = File(...), db: Session = Depend
             db.refresh(subject)
         else:
             subject.course_name = name
+            subject.year = c_year
+            subject.semester = semester
             subject.framework_id = framework.id
+            subject.department = department
             db.commit()
 
         # Update Course Outcomes for this subject
         if c_data["course_outcomes"]:
-            from models import AIMappingResult
             db.query(AIMappingResult).filter(AIMappingResult.subject_id == subject.id).delete()
             db.query(CourseOutcome).filter(CourseOutcome.subject_id == subject.id).delete()
             cos_to_add = []
@@ -135,12 +153,16 @@ async def upload_syllabus_pdf(file: UploadFile = File(...), db: Session = Depend
             "id": subject.id,
             "course_code": subject.course_code,
             "course_name": subject.course_name,
+            "year": subject.year,
+            "semester": subject.semester,
+            "division": subject.division,
             "co_count": len(c_data["course_outcomes"])
         })
 
     return {
         "status": "success",
-        "message": f"Successfully extracted syllabus data from '{file.filename}'",
+        "message": f"Successfully extracted {year_level} syllabus data from '{file.filename}'",
+        "year": year_level,
         "framework": {
             "id": framework.id,
             "name": framework.name,
@@ -148,3 +170,32 @@ async def upload_syllabus_pdf(file: UploadFile = File(...), db: Session = Depend
         },
         "courses": saved_courses
     }
+
+
+@router.post("/clear-database")
+def clear_database(db: Session = Depends(get_db)):
+    """
+    Clears all uploaded syllabus data, subjects, COs, POs/PSOs, mappings, and evaluations.
+    Preserves academic_divisions department structure.
+    """
+    try:
+        db.query(AIMappingResult).delete()
+        db.query(ReferenceMappingEntry).delete()
+        db.query(MappingEvaluation).delete()
+        db.query(Document).delete()
+        db.query(ProgramSpecificOutcome).delete()
+        db.query(ProgramOutcome).delete()
+        db.query(CourseOutcome).delete()
+        db.query(Subject).delete()
+        db.query(FrameworkOutcome).delete()
+        db.query(OutcomeFramework).delete()
+        db.commit()
+        return {
+            "status": "success",
+            "message": "Database successfully cleared. All previous frameworks, subjects, COs, POs, and mappings removed."
+        }
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error clearing database: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to clear database: {str(e)}")
+

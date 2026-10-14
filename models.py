@@ -8,15 +8,31 @@ from database import Base
 import enum
 
 
+class AcademicDivision(Base):
+    """Four years (FE, SE, TE, BE) and two divisions (A, B) for IT Department."""
+    __tablename__ = "academic_divisions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    year = Column(String(10), nullable=False)  # "FE", "SE", "TE", "BE"
+    division = Column(String(10), nullable=False)  # "A", "B"
+    class_name = Column(String(50), nullable=False)  # "BE-IT-A", "BE-IT-B", etc.
+    academic_year = Column(String(50), default="2024-25")
+    department = Column(String(100), default="Information Technology")
+    class_teacher = Column(String(100), nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+
 class Subject(Base):
     __tablename__ = "subjects"
 
     id = Column(Integer, primary_key=True, index=True)
     course_code = Column(String(50), unique=True, nullable=False)
     course_name = Column(String(200), nullable=False)
-    semester = Column(String(50))
-    academic_year = Column(String(50))
-    department = Column(String(100))
+    year = Column(String(10), default="BE")  # "FE", "SE", "TE", "BE"
+    semester = Column(String(50), default="Semester VII")
+    division = Column(String(20), default="All")  # "A", "B", "All"
+    academic_year = Column(String(50), default="2024-25")
+    department = Column(String(100), default="Information Technology")
     theory_enabled = Column(Boolean, default=True)
     description = Column(Text, nullable=True)
     # A programme framework owns the canonical PO/PSO definitions.  Subjects
@@ -123,6 +139,7 @@ class AIMappingResult(Base):
     po_pso_id = Column(Integer, nullable=False)
     po_pso_code = Column(String(20), nullable=False)
     po_pso_type = Column(String(10), nullable=False)  # "PO" or "PSO"
+    division = Column(String(20), default="All")
 
     # AI outputs
     mapping_level = Column(Integer, nullable=False, default=0)
@@ -134,8 +151,8 @@ class AIMappingResult(Base):
 
     # Faculty review
     faculty_decision = Column(
-        SQLEnum(FacultyDecision),
-        default=FacultyDecision.PENDING,
+        String(20),
+        default="pending",
         nullable=False
     )
     final_mapping_level = Column(Integer, nullable=True)
@@ -153,6 +170,7 @@ class ReferenceMappingEntry(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     subject_id = Column(Integer, ForeignKey("subjects.id"), nullable=False)
+    division = Column(String(20), default="All")
     co_code = Column(String(20), nullable=False)
     po_pso_code = Column(String(20), nullable=False)
     po_pso_type = Column(String(10), nullable=False)  # "PO" or "PSO"
@@ -166,6 +184,7 @@ class MappingEvaluation(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     subject_id = Column(Integer, ForeignKey("subjects.id"), nullable=False)
+    division = Column(String(20), default="All")
     method = Column(String(20), nullable=False, default="hybrid")
 
     # Overall metrics

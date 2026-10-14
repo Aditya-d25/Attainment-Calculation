@@ -209,25 +209,43 @@ main {
   display: flex;
   align-items: center;
   gap: 12px;
-  min-width: 380px;
 }
 
-.selector-control label {
+.selector-filters-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filter-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.filter-item label {
   white-space: nowrap;
-  font-size: 14px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: #b0c9c0;
 }
 
-.selector-control select {
-  font-size: 15px;
+.filter-item select {
+  font-size: 14px;
   font-weight: 600;
-  padding: 10px 14px;
+  padding: 8px 12px;
   border-radius: 6px;
   border: 1px solid #2f4b42;
   background: #1c322b;
   color: #fff;
   cursor: pointer;
-  max-width: 480px;
+}
+
+.filter-item.course-item select {
+  min-width: 320px;
+  max-width: 500px;
 }
 
 .selector-control select option {
@@ -413,6 +431,21 @@ main {
 
 .button.secondary:hover {
   background: #c3e2c8;
+}
+
+.button.danger {
+  background: #ffffff;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.button.danger:hover {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-color: #fca5a5;
 }
 
 .button.small {
