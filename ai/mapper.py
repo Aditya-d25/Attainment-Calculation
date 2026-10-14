@@ -19,7 +19,7 @@ import logging
 from typing import List, Dict, Optional, Tuple
 
 from ai.preprocessor import preprocess_co, preprocess_po, get_enhanced_text
-from ai.embeddings import compute_similarity_matrix
+from ai.embeddings import compute_similarity_matrix, compute_similarity_matrix_cached
 from ai.llm_reasoner import LLMProvider, MappingResult, get_llm_provider
 from ai.validator import validate_mappings, fix_mapping_result, ValidationResult
 
@@ -38,6 +38,8 @@ def generate_mappings_hybrid(
     context: Optional[str] = None,
     similarity_threshold: float = DEFAULT_SIMILARITY_THRESHOLD,
     llm_provider: Optional[LLMProvider] = None,
+    subject_id: Optional[int] = None,
+    framework_id: Optional[int] = None,
 ) -> Tuple[List[MappingResult], ValidationResult, Dict]:
     """
     Full hybrid pipeline: Embedding → Similarity → LLM → Validation.
@@ -55,7 +57,13 @@ def generate_mappings_hybrid(
 
     # Step 2: Embedding & Similarity
     logger.info("Step 2: Computing semantic similarity...")
-    similarity_matrix = compute_similarity_matrix(co_enhanced, po_enhanced)
+    similarity_matrix = compute_similarity_matrix_cached(
+        co_enhanced, po_enhanced,
+        subject_id=subject_id,
+        framework_id=framework_id,
+        co_codes=co_codes,
+        po_pso_codes=po_pso_codes,
+    )
 
     # Step 3: Candidate Generation (Threshold + Top-K per CO)
     logger.info("Step 3: Identifying candidates...")
@@ -154,6 +162,8 @@ def generate_mappings_embedding_only(
     po_pso_texts: List[str],
     po_pso_types: List[str],
     context: Optional[str] = None,
+    subject_id: Optional[int] = None,
+    framework_id: Optional[int] = None,
 ) -> Tuple[List[MappingResult], ValidationResult, Dict]:
     """
     Baseline 1: Embedding-only method.
@@ -172,7 +182,13 @@ def generate_mappings_embedding_only(
     co_enhanced = [get_enhanced_text(p) for p in co_preprocessed]
     po_enhanced = [get_enhanced_text(p) for p in po_preprocessed]
 
-    similarity_matrix = compute_similarity_matrix(co_enhanced, po_enhanced)
+    similarity_matrix = compute_similarity_matrix_cached(
+        co_enhanced, po_enhanced,
+        subject_id=subject_id,
+        framework_id=framework_id,
+        co_codes=co_codes,
+        po_pso_codes=po_pso_codes,
+    )
 
     results = []
     for i, co_code in enumerate(co_codes):
@@ -268,6 +284,8 @@ def generate_mappings(
     po_pso_texts: List[str],
     po_pso_types: List[str],
     context: Optional[str] = None,
+    subject_id: Optional[int] = None,
+    framework_id: Optional[int] = None,
 ) -> Tuple[List[MappingResult], ValidationResult, Dict]:
     """
     Main entry point: generate mappings using the specified method.
@@ -277,13 +295,16 @@ def generate_mappings(
         co_codes, co_texts: Course outcomes
         po_pso_codes, po_pso_texts, po_pso_types: Program outcomes
         context: Optional course context
+        subject_id: Database subject ID (enables vector caching)
+        framework_id: Database framework ID (enables vector caching)
 
     Returns:
         Tuple of (results, validation, metadata)
     """
     if method == "embedding_only":
         return generate_mappings_embedding_only(
-            co_codes, co_texts, po_pso_codes, po_pso_texts, po_pso_types, context
+            co_codes, co_texts, po_pso_codes, po_pso_texts, po_pso_types,
+            context, subject_id=subject_id, framework_id=framework_id,
         )
     elif method == "llm_only":
         return generate_mappings_llm_only(
@@ -291,5 +312,6 @@ def generate_mappings(
         )
     else:
         return generate_mappings_hybrid(
-            co_codes, co_texts, po_pso_codes, po_pso_texts, po_pso_types, context
+            co_codes, co_texts, po_pso_codes, po_pso_texts, po_pso_types,
+            context, subject_id=subject_id, framework_id=framework_id,
         )

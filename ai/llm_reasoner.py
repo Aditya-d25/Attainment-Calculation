@@ -155,7 +155,10 @@ class GeminiProvider(LLMProvider):
         if self._client is None:
             import google.generativeai as genai
             genai.configure(api_key=self.api_key)
-            self._client = genai.GenerativeModel(self.model)
+            self._client = genai.GenerativeModel(
+                self.model,
+                generation_config={"temperature": 0.0, "top_p": 1.0},
+            )
         return self._client
 
     def reason_mapping(
@@ -519,7 +522,7 @@ def get_llm_provider() -> LLMProvider:
         return MockProvider()
 
     provider_name = os.getenv("LLM_PROVIDER", "gemini").lower()
-    api_key = os.getenv("LLM_API_KEY", "")
+    api_key = os.getenv("LLM_API_KEY", "") or os.getenv("GEMINI_API_KEY", "")
     model = os.getenv("LLM_MODEL", "gemini-flash-latest")
 
     if not api_key:

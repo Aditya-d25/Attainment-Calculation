@@ -66,6 +66,14 @@ def delete_subject(subject_id: int, db: Session = Depends(get_db)):
     db.query(AIMappingResult).filter(AIMappingResult.subject_id == subject_id).delete()
     db.delete(subject)
     db.commit()
+
+    # Invalidate cached vectors for this subject
+    try:
+        from ai.vector_store import invalidate_subject
+        invalidate_subject(subject_id)
+    except Exception:
+        pass
+
     return {"message": "Subject deleted"}
 
 
@@ -107,6 +115,7 @@ def update_co(
     if not co:
         raise HTTPException(status_code=404, detail="CO not found")
 
+    old_code = co.co_code
     if data.co_code is not None:
         co.co_code = data.co_code.strip().upper()
     if data.univ_attainment is not None:
@@ -118,6 +127,17 @@ def update_co(
 
     db.commit()
     db.refresh(co)
+
+    # Invalidate vector cache if code or description changed
+    if data.description is not None or data.co_code is not None:
+        try:
+            from ai.vector_store import invalidate_co
+            invalidate_co(subject_id, old_code)
+            if co.co_code != old_code:
+                invalidate_co(subject_id, co.co_code)
+        except Exception:
+            pass
+
     return co
 
 
@@ -129,9 +149,17 @@ def delete_co(subject_id: int, co_id: int, db: Session = Depends(get_db)):
     ).first()
     if not co:
         raise HTTPException(status_code=404, detail="CO not found")
+    old_code = co.co_code
     db.query(AIMappingResult).filter(AIMappingResult.co_id == co_id).delete()
     db.delete(co)
     db.commit()
+
+    try:
+        from ai.vector_store import invalidate_co
+        invalidate_co(subject_id, old_code)
+    except Exception:
+        pass
+
     return {"message": "CO deleted"}
 
 

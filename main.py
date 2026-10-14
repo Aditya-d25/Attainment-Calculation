@@ -65,14 +65,22 @@ app.include_router(pdf.router)
 @app.get("/")
 async def home(request: Request):
     """Serve the main frontend application."""
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="index.html")
 
 
 @app.get("/api/health")
 def health_check():
     """Health check endpoint."""
+    vector_stats = None
+    try:
+        from ai.vector_store import get_vector_store_stats
+        vector_stats = get_vector_store_stats()
+    except Exception:
+        pass
+
     return {
         "status": "running",
         "app": "AI CO-PO Mapping Agent",
         "mock_mode": os.getenv("MOCK_MODE", "true").lower() == "true",
+        "vector_store": vector_stats,
     }

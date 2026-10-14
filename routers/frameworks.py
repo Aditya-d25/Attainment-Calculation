@@ -113,6 +113,13 @@ def update_outcome_item(
     row.description = item.description.strip()
     db.commit()
     db.refresh(row)
+
+    try:
+        from ai.vector_store import invalidate_framework
+        invalidate_framework(framework_id)
+    except Exception:
+        pass
+
     return row
 
 
@@ -130,6 +137,13 @@ def delete_outcome_item(
         raise HTTPException(status_code=404, detail="Framework outcome not found")
     db.delete(row)
     db.commit()
+
+    try:
+        from ai.vector_store import invalidate_framework
+        invalidate_framework(framework_id)
+    except Exception:
+        pass
+
     return {"status": "success", "message": "Framework outcome deleted"}
 
 
@@ -155,6 +169,13 @@ def replace_outcomes(
     ) for item in outcomes]
     db.add_all(rows)
     db.commit()
+
+    try:
+        from ai.vector_store import invalidate_framework
+        invalidate_framework(framework_id)
+    except Exception:
+        pass
+
     return db.query(FrameworkOutcome).filter(
         FrameworkOutcome.framework_id == framework_id
     ).order_by(FrameworkOutcome.outcome_type, FrameworkOutcome.outcome_code).all()

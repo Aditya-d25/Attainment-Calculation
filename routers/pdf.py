@@ -93,6 +93,13 @@ async def upload_syllabus_pdf(file: UploadFile = File(...), db: Session = Depend
         db.add_all(new_outcomes)
         db.commit()
 
+        # Invalidate cached framework vectors so they are re-embedded
+        try:
+            from ai.vector_store import invalidate_framework
+            invalidate_framework(framework.id)
+        except Exception:
+            pass  # Vector store is optional; don't block the upload
+
     # 3. Process Courses & COs
     saved_courses = []
     for c_data in parsed_data["courses"]:
@@ -130,6 +137,13 @@ async def upload_syllabus_pdf(file: UploadFile = File(...), db: Session = Depend
                 ))
             db.add_all(cos_to_add)
             db.commit()
+
+            # Invalidate cached CO vectors for this subject
+            try:
+                from ai.vector_store import invalidate_subject
+                invalidate_subject(subject.id)
+            except Exception:
+                pass  # Vector store is optional
 
         saved_courses.append({
             "id": subject.id,

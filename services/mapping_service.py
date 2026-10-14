@@ -108,6 +108,8 @@ def run_mapping_generation(
         po_pso_texts=po_pso_texts,
         po_pso_types=po_pso_types,
         context=combined_context or None,
+        subject_id=subject_id,
+        framework_id=data["subject"].framework_id,
     )
     results = _apply_feedback_priors(results, co_codes, co_texts, feedback_examples)
 

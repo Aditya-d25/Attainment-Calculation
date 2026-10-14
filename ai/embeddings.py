@@ -182,3 +182,88 @@ def compute_pairwise_similarity(
 
     sim = cosine_similarity(emb_a, emb_b)
     return float(sim[0][0])
+
+
+def compute_similarity_matrix_cached(
+    co_texts: List[str],
+    po_pso_texts: List[str],
+    subject_id: Optional[int] = None,
+    framework_id: Optional[int] = None,
+    model_name: Optional[str] = None,
+    co_codes: Optional[List[str]] = None,
+    po_pso_codes: Optional[List[str]] = None,
+) -> np.ndarray:
+    """
+    Compute pairwise cosine similarity using ChromaDB-cached embeddings.
+
+    If subject_id and framework_id are provided, embeddings are looked up
+    (or stored) in the persistent vector store so that identical outcome
+    texts are never re-encoded.  Falls back to the standard in-memory
+    path when IDs are not available.
+
+    Args:
+        co_texts:       Enhanced CO text descriptions.
+        po_pso_texts:   Enhanced PO/PSO text descriptions.
+        subject_id:     Database subject ID (enables CO vector caching).
+        framework_id:   Database framework ID (enables PO/PSO vector caching).
+        model_name:     Optional embedding model override.
+        co_codes:       Optional actual CO codes (e.g. ['CO1', 'CO2']).
+        po_pso_codes:   Optional actual PO/PSO codes (e.g. ['PO1', ..., 'PSO1']).
+
+    Returns:
+        numpy array of shape (n_cos, n_pos_psos) with similarity scores.
+    """
+    provider = get_embedding_provider(model_name)
+
+    # TF-IDF must fit on combined texts — caching is not meaningful.
+    if isinstance(provider, TFIDFProvider):
+        return compute_similarity_matrix(co_texts, po_pso_texts, model_name)
+
+    # When scope IDs are available, use the vector store.
+    if subject_id is not None and framework_id is not None:
+        try:
+            from ai.vector_store import (
+                get_or_compute_co_embeddings,
+                get_or_compute_fw_embeddings,
+            )
+
+            # Use actual codes or fallback to synthetic codes
+            c_codes = (
+                co_codes
+                if co_codes and len(co_codes) == len(co_texts)
+                else [f"CO{i+1}" for i in range(len(co_texts))]
+            )
+            f_codes = (
+                po_pso_codes
+                if po_pso_codes and len(po_pso_codes) == len(po_pso_texts)
+                else [f"FW{i+1}" for i in range(len(po_pso_texts))]
+            )
+
+            co_embeddings = get_or_compute_co_embeddings(
+                subject_id=subject_id,
+                co_codes=c_codes,
+                enhanced_texts=co_texts,
+                embedding_fn=provider.encode,
+            )
+            po_pso_embeddings = get_or_compute_fw_embeddings(
+                framework_id=framework_id,
+                outcome_codes=f_codes,
+                enhanced_texts=po_pso_texts,
+                embedding_fn=provider.encode,
+            )
+
+            similarity = cosine_similarity(co_embeddings, po_pso_embeddings)
+            return similarity
+
+        except Exception as e:
+            logger.warning(
+                f"Vector store cache unavailable ({e}); "
+                f"falling back to in-memory embedding"
+            )
+
+    # Fallback: compute embeddings fresh in memory (original behaviour).
+    co_embeddings = provider.encode(co_texts)
+    po_pso_embeddings = provider.encode(po_pso_texts)
+    similarity = cosine_similarity(co_embeddings, po_pso_embeddings)
+    return similarity
+

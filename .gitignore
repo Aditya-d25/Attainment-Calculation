@@ -21,6 +21,7 @@ uploads/*
 !uploads/.gitkeep
 *.db
 test.db
+chroma_db/
 scratch/
 
 
