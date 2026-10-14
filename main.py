@@ -1,5 +1,9 @@
 import os
 import logging
+import warnings
+
+# Suppress Python 3.9 EOL and google-generativeai migration FutureWarnings on startup
+warnings.filterwarnings("ignore", category=FutureWarning)
 
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
