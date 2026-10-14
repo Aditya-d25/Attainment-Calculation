@@ -47,7 +47,7 @@ def extract_text_from_pdf(file_path: str) -> List[Dict[str, any]]:
     return pages_data
 
 
-def parse_pdf_syllabus(file_path: str, target_year: Optional[str] = None) -> Dict[str, any]:
+def parse_pdf_syllabus(file_path: str) -> Dict[str, any]:
     """
     Parses a syllabus PDF to extract:
     1. Framework Metadata (Title, Department, Academic Year, Year Level)
@@ -59,7 +59,7 @@ def parse_pdf_syllabus(file_path: str, target_year: Optional[str] = None) -> Dic
 
     # 1. Detect Year Level (FE, SE, TE, BE)
     detected_year = _detect_year_level(full_text, pages_data)
-    final_year = target_year if (target_year and target_year.upper() in ["FE", "SE", "TE", "BE"]) else detected_year
+    final_year = detected_year
 
     # 2. Extract Framework Metadata
     framework_name = _extract_framework_title(full_text, pages_data, final_year)

@@ -1,7 +1,6 @@
 const S = {
   frameworks: [],
   frameworkId: null,
-  allCourses: [],
   courses: [],
   courseId: null,
   cos: [],
@@ -100,21 +99,9 @@ function init() {
   if (uploadBtn) {
     uploadBtn.onclick = handlePDFUpload;
   }
-  const clearDbBtn = $('clear-db-btn');
-  if (clearDbBtn) {
-    clearDbBtn.onclick = handleClearDatabase;
-  }
   const courseSelect = $('course-select');
   if (courseSelect) {
     courseSelect.onchange = handleCourseSelectChange;
-  }
-  const filterYear = $('filter-year');
-  if (filterYear) {
-    filterYear.onchange = handleYearFilterChange;
-  }
-  const filterDivision = $('filter-division');
-  if (filterDivision) {
-    filterDivision.onchange = () => populateCourseDropdown();
   }
 
   $('add-co-btn').onclick = () => openOutcomeModal('add', 'CO');
@@ -157,40 +144,6 @@ async function loadInitialData() {
 
   // Load Frameworks & Courses
   await fetchFrameworks();
-}
-
-async function handleClearDatabase() {
-  if (!confirm("Are you sure you want to clear the entire database? All uploaded courses, COs, POs/PSOs, and mappings will be permanently removed.")) {
-    return;
-  }
-  try {
-    const res = await api('/api/pdf/clear-database', { method: 'POST' });
-    toast(res.message || "Database cleared successfully!");
-    
-    // Reset state
-    S.frameworks = [];
-    S.frameworkId = null;
-    S.allCourses = [];
-    S.courses = [];
-    S.courseId = null;
-    S.cos = [];
-    S.pos = [];
-    S.mappings = [];
-
-    $('current-framework-name').textContent = 'Framework: Upload Syllabus PDF to extract framework';
-    $('current-framework-details').textContent = 'Upload syllabus PDF above to automatically populate courses & outcomes.';
-    $('selected-course-banner-title').textContent = 'Select a course to view and edit outcomes';
-    $('selected-course-banner-sub').textContent = 'Verify and customize the extracted Course Outcomes (COs) and Program Outcomes (POs) below.';
-    
-    populateCourseDropdown();
-    renderPOs();
-    renderCOs();
-    renderMatrix();
-    updateOutcomesSummary();
-  } catch (err) {
-    console.error("Failed to clear database:", err);
-    toast("Error clearing database: " + err.message);
-  }
 }
 
 function setupFileInput() {
@@ -265,10 +218,6 @@ async function handlePDFUpload(e) {
 
   const formData = new FormData();
   formData.append('file', file);
-  const targetYear = $('upload-year-target') ? $('upload-year-target').value : 'auto';
-  if (targetYear && targetYear !== 'auto') {
-    formData.append('year', targetYear);
-  }
 
   try {
     const res = await api('/api/pdf/upload', {
@@ -280,12 +229,7 @@ async function handlePDFUpload(e) {
       statusDiv.className = 'upload-status success';
       statusDiv.textContent = `✓ ${res.message} (${res.framework.po_count} POs, ${res.courses.length} Courses)`;
     }
-    toast(`Syllabus extracted: ${res.framework.po_count} POs & ${res.courses.length} courses for [${res.year}]!`);
-
-    // Set year filter to the uploaded syllabus's year
-    if ($('filter-year') && res.year) {
-      $('filter-year').value = res.year;
-    }
+    toast(`Syllabus extracted: ${res.framework.po_count} POs & ${res.courses.length} courses!`);
 
     // Reload frameworks & select the new framework
     await fetchFrameworks(res.framework ? res.framework.id : null);
@@ -314,31 +258,25 @@ window.handlePDFUpload = handlePDFUpload;
 async function fetchFrameworks(selectFrameworkId = null) {
   try {
     S.frameworks = await api('/api/frameworks');
-    S.allCourses = await api('/api/subjects').catch(() => []);
 
     if (!S.frameworks || S.frameworks.length === 0) {
       $('current-framework-name').textContent = 'Framework: Upload Syllabus PDF to extract framework';
       $('current-framework-details').textContent = 'Upload syllabus PDF above to automatically populate courses & outcomes.';
       S.courses = [];
-      S.pos = [];
       populateCourseDropdown();
-      renderPOs();
       return;
     }
 
-    // Determine target framework
+    // Auto-select framework
     let targetId = selectFrameworkId;
     if (!targetId) {
-      const yearFilter = $('filter-year') ? $('filter-year').value : 'All';
-      // If year filter is active and not All, find matching framework
-      if (yearFilter && yearFilter !== 'All') {
-        const matchingFw = S.frameworks.find(f => f.name.includes(`-${yearFilter}`) || f.name.includes(` ${yearFilter} `) || f.name.includes(` ${yearFilter}(`));
-        if (matchingFw) targetId = matchingFw.id;
-      }
-      if (!targetId) {
-        // Find framework with subjects
-        const fwWithSubs = S.frameworks.find(f => S.allCourses.some(s => Number(s.framework_id) === Number(f.id)));
-        targetId = fwWithSubs ? fwWithSubs.id : S.frameworks[S.frameworks.length - 1].id;
+      const allSubjects = await api('/api/subjects').catch(() => []);
+      const fwWithSubs = S.frameworks.find(f => allSubjects.some(s => Number(s.framework_id) === Number(f.id)));
+      if (fwWithSubs) {
+        targetId = fwWithSubs.id;
+      } else {
+        const sorted = [...S.frameworks].sort((a, b) => Number(b.id) - Number(a.id));
+        targetId = sorted[0].id;
       }
     }
 
@@ -370,65 +308,38 @@ async function selectFramework(id) {
     renderPOs();
   }
 
-  // Update courses list
-  populateCourseDropdown();
-}
-
-function handleYearFilterChange() {
-  const yearFilter = $('filter-year') ? $('filter-year').value : 'All';
-  if (yearFilter && yearFilter !== 'All') {
-    const matchingFw = S.frameworks.find(f => f.name.includes(`-${yearFilter}`) || f.name.includes(` ${yearFilter} `) || f.name.includes(` ${yearFilter}(`));
-    if (matchingFw && Number(matchingFw.id) !== Number(S.frameworkId)) {
-      selectFramework(matchingFw.id);
-      return;
+  // Fetch Courses attached to this framework
+  try {
+    const allSubjects = await api('/api/subjects');
+    S.courses = allSubjects.filter(s => s.framework_id && Number(s.framework_id) === Number(id));
+    if (S.courses.length === 0 && allSubjects.length > 0) {
+      S.courses = allSubjects;
     }
+    populateCourseDropdown();
+  } catch (err) {
+    console.error('Failed to fetch courses:', err);
   }
-  populateCourseDropdown();
 }
 
 function populateCourseDropdown() {
   const select = $('course-select');
   if (!select) return;
 
-  const yearFilter = $('filter-year') ? $('filter-year').value : 'All';
-  const divFilter = $('filter-division') ? $('filter-division').value : 'All';
-
-  let filtered = S.allCourses || [];
-  if (yearFilter && yearFilter !== 'All') {
-    filtered = filtered.filter(c => !c.year || c.year === yearFilter);
-  }
-  if (divFilter && divFilter !== 'All') {
-    filtered = filtered.filter(c => !c.division || c.division === 'All' || c.division === divFilter || c.division.includes(divFilter));
-  }
-
-  S.courses = filtered;
-
-  if (filtered.length === 0) {
-    const yrLabel = yearFilter === 'All' ? 'any year' : yearFilter;
-    select.innerHTML = `<option value="">-- No Courses in ${yrLabel} --</option>`;
-    S.courseId = null;
-    S.cos = [];
-    S.mappings = [];
-    $('selected-course-banner-title').textContent = `No courses found for ${yrLabel}`;
-    $('selected-course-banner-sub').textContent = `Upload the ${yrLabel} syllabus PDF above to automatically extract its courses and outcomes.`;
-    renderCOs();
-    renderMatrix();
-    updateOutcomesSummary();
+  if (!S.courses || S.courses.length === 0) {
+    select.innerHTML = '<option value="">-- No Courses Extracted Yet --</option>';
     return;
   }
 
   select.innerHTML = '<option value="">-- Select Course from List --</option>' +
-    filtered.map(c => {
-      const yrText = c.year ? `[${c.year}] ` : '';
-      const semText = c.semester ? ` (${c.semester})` : '';
-      const coText = (c.co_count !== undefined) ? ` - ${c.co_count} COs` : '';
-      return `<option value="${c.id}">${yrText}${esc(c.course_code)}: ${esc(c.course_name)}${semText}${coText}</option>`;
+    S.courses.map(c => {
+      const coText = (c.co_count !== undefined) ? ` (${c.co_count} COs)` : '';
+      return `<option value="${c.id}">[${esc(c.course_code)}] ${esc(c.course_name)}${coText}</option>`;
     }).join('');
 
-  if (S.courseId && filtered.some(c => Number(c.id) === Number(S.courseId))) {
+  if (S.courseId && S.courses.some(c => Number(c.id) === Number(S.courseId))) {
     select.value = S.courseId;
-  } else if (filtered.length > 0) {
-    const targetCourse = filtered.find(c => (c.co_count || 0) > 0) || filtered[0];
+  } else if (S.courses.length > 0) {
+    const targetCourse = S.courses.find(c => (c.co_count || 0) > 0) || S.courses[0];
     select.value = targetCourse.id;
     selectCourse(targetCourse.id);
   }
@@ -451,14 +362,13 @@ async function handleCourseSelectChange(e) {
 async function selectCourse(courseId) {
   S.courseId = courseId;
   $('course-select').value = courseId;
-  const course = (S.allCourses || []).find(c => c.id === courseId) || (S.courses || []).find(c => c.id === courseId);
+  const course = S.courses.find(c => c.id === courseId);
 
   if (course) {
     $('selected-course-banner-title').textContent = `${course.course_code}: ${course.course_name}`;
-    $('selected-course-banner-sub').textContent = `Department of Information Technology | Class: ${course.year || 'BE'} (${course.semester || 'Semester VII'}) | Division: ${course.division || 'All (Div A & B)'} | Outcomes Ready for Review`;
+    $('selected-course-banner-sub').textContent = `Review and edit the extracted outcomes below. When ready, click Proceed to generate the explainable CO-PO matrix.`;
     $('co-card-title').textContent = `Course Outcomes (${course.course_code})`;
     $('matrix-course-title').textContent = `Mapping Matrix: ${course.course_code} - ${course.course_name}`;
-    $('current-framework-details').textContent = `Department: Information Technology | Class: ${course.year || 'BE'} (${course.semester || 'Semester VII'}) | Division: ${course.division || 'Div A & B'}`;
 
     // If course belongs to a specific framework, align framework & POs
     if (course.framework_id && Number(course.framework_id) !== Number(S.frameworkId)) {
@@ -512,7 +422,7 @@ function updateOutcomesSummary() {
   $('co-count-badge').textContent = `${coCount} COs`;
   $('po-count-badge').textContent = `${poCount} POs`;
 
-  const course = (S.allCourses || []).find(c => c.id === S.courseId);
+  const course = (S.courses || []).find(c => c.id === S.courseId);
   if (course) {
     course.co_count = coCount;
     $('footer-status-text').textContent = `Course ready: ${coCount} COs defined against ${poCount} Program Outcomes.`;

@@ -209,43 +209,25 @@ main {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 380px;
 }
 
-.selector-filters-row {
-  display: flex;
-  align-items: flex-end;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.filter-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.filter-item label {
+.selector-control label {
   white-space: nowrap;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: 14px;
   color: #b0c9c0;
 }
 
-.filter-item select {
-  font-size: 14px;
+.selector-control select {
+  font-size: 15px;
   font-weight: 600;
-  padding: 8px 12px;
+  padding: 10px 14px;
   border-radius: 6px;
   border: 1px solid #2f4b42;
   background: #1c322b;
   color: #fff;
   cursor: pointer;
-}
-
-.filter-item.course-item select {
-  min-width: 320px;
-  max-width: 500px;
+  max-width: 480px;
 }
 
 .selector-control select option {

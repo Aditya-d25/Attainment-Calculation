@@ -46,41 +46,8 @@ def create_subject(data: SubjectCreate, db: Session = Depends(get_db)):
 
 
 @router.get("", response_model=List[SubjectResponse])
-def list_subjects(
-    year: Optional[str] = None,
-    division: Optional[str] = None,
-    framework_id: Optional[int] = None,
-    db: Session = Depends(get_db)
-):
-    query = db.query(Subject)
-    if framework_id:
-        query = query.filter(Subject.framework_id == framework_id)
-    if year and year != "All":
-        query = query.filter(Subject.year == year)
-    if division and division != "All":
-        query = query.filter((Subject.division == division) | (Subject.division == "All") | (Subject.division == "A, B"))
-    return query.all()
-
-
-@router.get("/divisions/list")
-def list_divisions(db: Session = Depends(get_db)):
-    from models import AcademicDivision
-    divs = db.query(AcademicDivision).order_by(AcademicDivision.year, AcademicDivision.division).all()
-    if not divs:
-        default_divs = []
-        for yr in ["FE", "SE", "TE", "BE"]:
-            for d in ["A", "B"]:
-                div_obj = AcademicDivision(
-                    year=yr,
-                    division=d,
-                    class_name=f"{yr}-IT-{d}",
-                    department="Information Technology"
-                )
-                db.add(div_obj)
-                default_divs.append(div_obj)
-        db.commit()
-        divs = db.query(AcademicDivision).order_by(AcademicDivision.year, AcademicDivision.division).all()
-    return divs
+def list_subjects(db: Session = Depends(get_db)):
+    return db.query(Subject).all()
 
 
 @router.get("/{subject_id}", response_model=SubjectResponse)

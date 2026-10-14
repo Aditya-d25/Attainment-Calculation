@@ -13,12 +13,7 @@
   <header class="topbar">
     <a class="brand" href="#">◈ CO-PO Mapping Agent</a>
     <p>Automated CO-PO Syllabus Extraction & AI Mapping</p>
-    <div style="display: flex; align-items: center; gap: 10px;">
-      <button id="clear-db-btn" class="button danger small" title="Clear all courses, outcomes, and mappings from database">
-        🗑 Clear Database
-      </button>
-      <div id="mode-badge" class="status">Connecting…</div>
-    </div>
+    <div id="mode-badge" class="status">Connecting…</div>
   </header>
 
   <main>
@@ -49,8 +44,8 @@
         <h1>Upload Syllabus PDF.<br><em>Extract COs & POs automatically.</em></h1>
         <p class="lead">
           Upload any engineering syllabus PDF (e.g. SPPU TE 2024 NEP-2020 or BE 2019 curriculum).
-          Program Outcomes (POs/PSOs) and course-wise Course Outcomes (COs) are automatically extracted year-wise.
-          Manage all four academic years (FE, SE, TE, BE) seamlessly with one clean platform.
+          Program Outcomes (POs/PSOs) and course-wise Course Outcomes (COs) are automatically extracted.
+          Select any course to view, edit, or adjust outcomes, and proceed towards explainable AI CO-PO matrix generation.
         </p>
       </div>
 
@@ -59,7 +54,7 @@
         <div class="upload-header">
           <span class="upload-icon">📄</span>
           <h3>Upload Syllabus PDF</h3>
-          <p class="muted">Extracts shared POs/PSOs & all courses with their COs year-wise</p>
+          <p class="muted">Extracts shared POs/PSOs & all courses with their COs</p>
         </div>
 
         <form id="pdf-upload-form" class="upload-form"
@@ -67,17 +62,6 @@
           <div class="file-drop-area" id="drop-area">
             <input type="file" id="pdf-file-input" accept=".pdf" />
             <span class="file-msg" id="file-label">Click or drag & drop syllabus PDF here</span>
-          </div>
-
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 8px;">
-            <label for="upload-year-target" style="font-size: 13px; font-weight: 600; color: #374151;">Target Academic Year:</label>
-            <select id="upload-year-target" style="padding: 6px 10px; border-radius: 6px; border: 1px solid var(--line); font-size: 13px; font-weight: 600;">
-              <option value="auto">Auto-Detect from PDF</option>
-              <option value="FE">FE (First Year)</option>
-              <option value="SE">SE (Second Year)</option>
-              <option value="TE">TE (Third Year)</option>
-              <option value="BE">BE (Final Year)</option>
-            </select>
           </div>
 
           <button type="button" id="upload-btn" onclick="handlePDFUpload(event)" class="button primary block">
@@ -92,35 +76,15 @@
     <section class="selector-section">
       <div class="selector-card">
         <div class="selector-info">
-          <span class="section-kicker">DEPARTMENT OF INFORMATION TECHNOLOGY — CO-PO MAPPING & ATTAINMENT</span>
-          <h2 id="current-framework-name">Framework: SPPU - BE Information Technology (2019 Course)</h2>
-          <p id="current-framework-details" class="muted">Department: Information Technology | 4 Years (FE, SE, TE, BE) & 2 Divisions (A & B)</p>
+          <span class="section-kicker">SELECT COURSE FOR OUTCOME REVIEW & MAPPING</span>
+          <h2 id="current-framework-name">Framework: Upload Syllabus PDF to extract outcomes</h2>
+          <p id="current-framework-details" class="muted">Academic Year: 2025-26 | Department: E&TC</p>
         </div>
-        <div class="selector-control selector-filters-row">
-          <div class="filter-item">
-            <label for="filter-year"><b>Year:</b></label>
-            <select id="filter-year">
-              <option value="All">All Years</option>
-              <option value="FE">FE (1st Year)</option>
-              <option value="SE">SE (2nd Year)</option>
-              <option value="TE">TE (3rd Year)</option>
-              <option value="BE" selected>BE (Final Year)</option>
-            </select>
-          </div>
-          <div class="filter-item">
-            <label for="filter-division"><b>Division:</b></label>
-            <select id="filter-division">
-              <option value="All" selected>All (Div A & B)</option>
-              <option value="A">Division A</option>
-              <option value="B">Division B</option>
-            </select>
-          </div>
-          <div class="filter-item course-item">
-            <label for="course-select"><b>Select Course:</b></label>
-            <select id="course-select">
-              <option value="">-- Upload PDF or Select a Course --</option>
-            </select>
-          </div>
+        <div class="selector-control">
+          <label for="course-select"><b>Select Course from List:</b></label>
+          <select id="course-select">
+            <option value="">-- Upload PDF or Select a Course --</option>
+          </select>
         </div>
       </div>
     </section>
