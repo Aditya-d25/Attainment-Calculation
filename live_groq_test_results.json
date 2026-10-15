@@ -1,0 +1,1072 @@
+[
+  {
+    "co_code": "CO1",
+    "po_pso_code": "PO9",
+    "mapping_level": 0,
+    "confidence": 0.92,
+    "reason": "No meaningful correlation detected between course outcome and PO9 (similarity: 0.08).",
+    "evidence": [],
+    "similarity_score": 0.08365272628978217
+  },
+  {
+    "co_code": "CO1",
+    "po_pso_code": "PO10",
+    "mapping_level": 0,
+    "confidence": 0.98,
+    "reason": "No meaningful correlation detected between course outcome and PO10 (similarity: 0.02).",
+    "evidence": [],
+    "similarity_score": 0.016180241504615896
+  },
+  {
+    "co_code": "CO2",
+    "po_pso_code": "PO9",
+    "mapping_level": 0,
+    "confidence": 0.91,
+    "reason": "No meaningful correlation detected between course outcome and PO9 (similarity: 0.09).",
+    "evidence": [],
+    "similarity_score": 0.08862766238867109
+  },
+  {
+    "co_code": "CO2",
+    "po_pso_code": "PO12",
+    "mapping_level": 0,
+    "confidence": 0.9,
+    "reason": "No meaningful correlation detected between course outcome and PO12 (similarity: 0.10).",
+    "evidence": [],
+    "similarity_score": 0.1048675712654547
+  },
+  {
+    "co_code": "CO3",
+    "po_pso_code": "PO9",
+    "mapping_level": 0,
+    "confidence": 1.0,
+    "reason": "No meaningful correlation detected between course outcome and PO9 (similarity: -0.01).",
+    "evidence": [],
+    "similarity_score": -0.006726117010314767
+  },
+  {
+    "co_code": "CO4",
+    "po_pso_code": "PO9",
+    "mapping_level": 0,
+    "confidence": 0.95,
+    "reason": "No meaningful correlation detected between course outcome and PO9 (similarity: 0.05).",
+    "evidence": [],
+    "similarity_score": 0.052431543286336826
+  },
+  {
+    "co_code": "CO4",
+    "po_pso_code": "PO12",
+    "mapping_level": 0,
+    "confidence": 0.98,
+    "reason": "No meaningful correlation detected between course outcome and PO12 (similarity: 0.02).",
+    "evidence": [],
+    "similarity_score": 0.0217655955405632
+  },
+  {
+    "co_code": "CO5",
+    "po_pso_code": "PO6",
+    "mapping_level": 0,
+    "confidence": 1.0,
+    "reason": "No meaningful correlation detected between course outcome and PO6 (similarity: -0.04).",
+    "evidence": [],
+    "similarity_score": -0.03531770584090238
+  },
+  {
+    "co_code": "CO5",
+    "po_pso_code": "PO9",
+    "mapping_level": 0,
+    "confidence": 0.98,
+    "reason": "No meaningful correlation detected between course outcome and PO9 (similarity: 0.02).",
+    "evidence": [],
+    "similarity_score": 0.02407821997592251
+  },
+  {
+    "co_code": "CO5",
+    "po_pso_code": "PO12",
+    "mapping_level": 0,
+    "confidence": 1.0,
+    "reason": "No meaningful correlation detected between course outcome and PO12 (similarity: -0.02).",
+    "evidence": [],
+    "similarity_score": -0.020747043094634647
+  },
+  {
+    "co_code": "CO1",
+    "po_pso_code": "PO1",
+    "mapping_level": 2,
+    "confidence": 0.75,
+    "reason": "CO1 provides foundational knowledge essential for engineering principles, supporting PO1.",
+    "evidence": [
+      "theoretical foundations",
+      "engineering science"
+    ],
+    "similarity_score": 0.190416638416452
+  },
+  {
+    "co_code": "CO1",
+    "po_pso_code": "PO2",
+    "mapping_level": 2,
+    "confidence": 0.75,
+    "reason": "Understanding foundations aids problem analysis and solution design.",
+    "evidence": [
+      "problem analysis",
+      "systematic solution"
+    ],
+    "similarity_score": 0.19094484628152666
+  },
+  {
+    "co_code": "CO1",
+    "po_pso_code": "PO3",
+    "mapping_level": 2,
+    "confidence": 0.7,
+    "reason": "Foundational knowledge underpins design and implementation of DL systems.",
+    "evidence": [
+      "design",
+      "implementation"
+    ],
+    "similarity_score": 0.1402220748216102
+  },
+  {
+    "co_code": "CO1",
+    "po_pso_code": "PO4",
+    "mapping_level": 2,
+    "confidence": 0.7,
+    "reason": "Conceptual understanding supports schematic solution formulation.",
+    "evidence": [
+      "schematic solutions",
+      "complex problems"
+    ],
+    "similarity_score": 0.15487825047389553
+  },
+  {
+    "co_code": "CO1",
+    "po_pso_code": "PO5",
+    "mapping_level": 1,
+    "confidence": 0.6,
+    "reason": "CO1 does not directly involve tool usage, only theoretical aspects.",
+    "evidence": [
+      "modern tools",
+      "frameworks"
+    ],
+    "similarity_score": 0.06904721021824742
+  },
+  {
+    "co_code": "CO1",
+    "po_pso_code": "PO6",
+    "mapping_level": 2,
+    "confidence": 0.8,
+    "reason": "Understanding mathematical and algorithmic principles supports application in modeling.",
+    "evidence": [
+      "mathematical foundations",
+      "algorithmic principles"
+    ],
+    "similarity_score": 0.32739738654593065
+  },
+  {
+    "co_code": "CO1",
+    "po_pso_code": "PO7",
+    "mapping_level": 1,
+    "confidence": 0.6,
+    "reason": "Theoretical understanding of deep learning provides a basis for considering computational efficiency and resource usage, which indirectly relates to environmental sustainability.",
+    "evidence": [
+      "computational efficiency",
+      "resource usage"
+    ],
+    "similarity_score": 0.06515878039566256
+  },
+  {
+    "co_code": "CO1",
+    "po_pso_code": "PO8",
+    "mapping_level": 1,
+    "confidence": 0.6,
+    "reason": "Knowledge of deep learning theory can inform awareness of bias, privacy, and fairness issues, but does not directly address ethical responsibilities.",
+    "evidence": [
+      "bias mitigation",
+      "privacy"
+    ],
+    "similarity_score": 0.07769885983832392
+  },
+  {
+    "co_code": "CO1",
+    "po_pso_code": "PO11",
+    "mapping_level": 0,
+    "confidence": 0.9,
+    "reason": "Understanding theory does not involve communication skills such as presentations or report writing.",
+    "evidence": [],
+    "similarity_score": 0.07824937454543937
+  },
+  {
+    "co_code": "CO1",
+    "po_pso_code": "PO12",
+    "mapping_level": 2,
+    "confidence": 0.7,
+    "reason": "Theoretical foundations of deep learning include algorithmic complexity and matrix operations, supporting optimization and performance analysis.",
+    "evidence": [
+      "matrix operations",
+      "time complexity"
+    ],
+    "similarity_score": 0.09322818465703117
+  },
+  {
+    "co_code": "CO1",
+    "po_pso_code": "PSO1",
+    "mapping_level": 2,
+    "confidence": 0.8,
+    "reason": "Foundational knowledge enables students to apply concepts in analysis, design, and development of IT systems.",
+    "evidence": [
+      "application",
+      "design"
+    ],
+    "similarity_score": 0.21253087314963426
+  },
+  {
+    "co_code": "CO1",
+    "po_pso_code": "PSO2",
+    "mapping_level": 1,
+    "confidence": 0.6,
+    "reason": "Understanding theory aids problem analysis but does not directly cover infrastructure design or large\u2011scale computing requirements.",
+    "evidence": [
+      "problem analysis",
+      "infrastructure"
+    ],
+    "similarity_score": 0.19684461160170424
+  },
+  {
+    "co_code": "CO1",
+    "po_pso_code": "PSO3",
+    "mapping_level": 0,
+    "confidence": 0.9,
+    "reason": "CO1 focuses on theoretical foundations, not business processes.",
+    "evidence": [
+      "technical theory",
+      "business processes"
+    ],
+    "similarity_score": 0.10837833959945539
+  },
+  {
+    "co_code": "CO1",
+    "po_pso_code": "PSO4",
+    "mapping_level": 0,
+    "confidence": 0.9,
+    "reason": "CO1 does not address communication or decision\u2011making skills.",
+    "evidence": [
+      "understanding theory",
+      "communication skills"
+    ],
+    "similarity_score": 0.03369070187072547
+  },
+  {
+    "co_code": "CO2",
+    "po_pso_code": "PO1",
+    "mapping_level": 3,
+    "confidence": 0.85,
+    "reason": "CO2 directly applies engineering principles of deep learning.",
+    "evidence": [
+      "CNN application",
+      "engineering principles"
+    ],
+    "similarity_score": 0.18753678312038485
+  },
+  {
+    "co_code": "CO2",
+    "po_pso_code": "PO2",
+    "mapping_level": 3,
+    "confidence": 0.8,
+    "reason": "CO2 implements solutions to problems using CNNs, supporting systematic problem solving.",
+    "evidence": [
+      "CNN implementation",
+      "problem solving"
+    ],
+    "similarity_score": 0.1937740382969989
+  },
+  {
+    "co_code": "CO2",
+    "po_pso_code": "PO3",
+    "mapping_level": 3,
+    "confidence": 0.85,
+    "reason": "CO2 designs and implements CNN models, fulfilling software design and evaluation.",
+    "evidence": [
+      "CNN implementation",
+      "software design"
+    ],
+    "similarity_score": 0.2123781460167702
+  },
+  {
+    "co_code": "CO2",
+    "po_pso_code": "PO4",
+    "mapping_level": 2,
+    "confidence": 0.75,
+    "reason": "CO2 supports complex problem solutions but lacks benchmarking or ablation studies.",
+    "evidence": [
+      "CNN application",
+      "benchmarking"
+    ],
+    "similarity_score": 0.21142562474185622
+  },
+  {
+    "co_code": "CO2",
+    "po_pso_code": "PO5",
+    "mapping_level": 3,
+    "confidence": 0.95,
+    "reason": "Implementing and applying modern CNN architectures requires hands\u2011on usage of standard deep learning frameworks (PyTorch, TensorFlow) and GPU\u2011accelerated computing tools.",
+    "evidence": [
+      "PyTorch/TensorFlow frameworks",
+      "GPU/CUDA tool usage"
+    ],
+    "similarity_score": 0.20981131896509098
+  },
+  {
+    "co_code": "CO2",
+    "po_pso_code": "PO6",
+    "mapping_level": 2,
+    "confidence": 0.8,
+    "reason": "Applying CNNs involves algorithmic principles and mathematical foundations such as convolution operations and backpropagation.",
+    "evidence": [
+      "convolution operations",
+      "backpropagation"
+    ],
+    "similarity_score": 0.19612710103171424
+  },
+  {
+    "co_code": "CO2",
+    "po_pso_code": "PO7",
+    "mapping_level": 1,
+    "confidence": 0.6,
+    "reason": "CNN training can impact energy consumption, but CO2 does not explicitly address sustainability.",
+    "evidence": [
+      "energy consumption",
+      "GPU usage"
+    ],
+    "similarity_score": 0.12916834000363986
+  },
+  {
+    "co_code": "CO2",
+    "po_pso_code": "PO8",
+    "mapping_level": 1,
+    "confidence": 0.5,
+    "reason": "CO2 focuses on technical implementation, lacking explicit ethical considerations.",
+    "evidence": [
+      "bias mitigation",
+      "data privacy"
+    ],
+    "similarity_score": 0.07160217242831136
+  },
+  {
+    "co_code": "CO2",
+    "po_pso_code": "PO10",
+    "mapping_level": 1,
+    "confidence": 0.55,
+    "reason": "Learning CNN architectures requires staying updated, but CO2 does not explicitly emphasize continuous learning.",
+    "evidence": [
+      "rapidly evolving techniques",
+      "continuous upskilling"
+    ],
+    "similarity_score": 0.19112373267194582
+  },
+  {
+    "co_code": "CO2",
+    "po_pso_code": "PO11",
+    "mapping_level": 0,
+    "confidence": 0.9,
+    "reason": "CO2 does not assess presentation or report writing.",
+    "evidence": [
+      "presentation",
+      "report writing"
+    ],
+    "similarity_score": 0.18330375491740603
+  },
+  {
+    "co_code": "CO2",
+    "po_pso_code": "PSO1",
+    "mapping_level": 3,
+    "confidence": 0.9,
+    "reason": "Direct application of CNNs to IT systems embodies the core of PSO1\u2019s emphasis on applying theoretical and practical IT knowledge in system design and development.",
+    "evidence": [
+      "CNN application",
+      "deep learning frameworks"
+    ],
+    "similarity_score": 0.32914367462983746
+  },
+  {
+    "co_code": "CO2",
+    "po_pso_code": "PSO2",
+    "mapping_level": 2,
+    "confidence": 0.7,
+    "reason": "CO2 supports problem analysis by demonstrating how CNNs can be deployed, but it does not directly address infrastructure requirements outlined in PSO2.",
+    "evidence": [
+      "CNN deployment",
+      "model implementation"
+    ],
+    "similarity_score": 0.26060136465753125
+  },
+  {
+    "co_code": "CO2",
+    "po_pso_code": "PSO3",
+    "mapping_level": 1,
+    "confidence": 0.6,
+    "reason": "The technical focus of CO2 has only a peripheral link to the ethical and business considerations of PSO3.",
+    "evidence": [
+      "technical implementation"
+    ],
+    "similarity_score": 0.09066586769098156
+  },
+  {
+    "co_code": "CO2",
+    "po_pso_code": "PSO4",
+    "mapping_level": 1,
+    "confidence": 0.6,
+    "reason": "CO2 may involve presenting results, yet it does not centrally address communication or decision\u2011making skills required by PSO4.",
+    "evidence": [
+      "result presentation"
+    ],
+    "similarity_score": 0.29143901433447733
+  },
+  {
+    "co_code": "CO3",
+    "po_pso_code": "PO1",
+    "mapping_level": 1,
+    "confidence": 0.5,
+    "reason": "Analyzing RNNs provides limited engineering insight relative to the broad engineering focus of PO1.",
+    "evidence": [
+      "model analysis"
+    ],
+    "similarity_score": 0.08314814630845946
+  },
+  {
+    "co_code": "CO3",
+    "po_pso_code": "PO2",
+    "mapping_level": 1,
+    "confidence": 0.5,
+    "reason": "CO3 offers only marginal support for systematic problem definition and solution design as required by PO2.",
+    "evidence": [
+      "problem analysis"
+    ],
+    "similarity_score": 0.061920855359532706
+  },
+  {
+    "co_code": "CO3",
+    "po_pso_code": "PO3",
+    "mapping_level": 2,
+    "confidence": 0.7,
+    "reason": "CO3 provides conceptual analysis of neural network architectures that supports the design and evaluation of software systems, aligning with PO3\u2019s emphasis on system design and implementation.",
+    "evidence": [
+      "compare architectures",
+      "modeling time dimension"
+    ],
+    "similarity_score": 0.05486895249787323
+  },
+  {
+    "co_code": "CO3",
+    "po_pso_code": "PO4",
+    "mapping_level": 2,
+    "confidence": 0.7,
+    "reason": "The analytical comparison of network types aids in formulating schematic solutions to complex engineering problems, matching PO4\u2019s focus on problem formulation.",
+    "evidence": [
+      "compare architectures",
+      "time dimension modeling"
+    ],
+    "similarity_score": 0.1078107264783449
+  },
+  {
+    "co_code": "CO3",
+    "po_pso_code": "PO5",
+    "mapping_level": 1,
+    "confidence": 0.6,
+    "reason": "CO3 centers on conceptual comparison rather than hands\u2011on use of modern engineering tools, offering only peripheral support to PO5.",
+    "evidence": [
+      "compare architectures",
+      "RNN and LSTM"
+    ],
+    "similarity_score": 0.09946275519481879
+  },
+  {
+    "co_code": "CO3",
+    "po_pso_code": "PO6",
+    "mapping_level": 2,
+    "confidence": 0.75,
+    "reason": "Analyzing recurrent architectures engages algorithmic principles and mathematical foundations, directly supporting PO6\u2019s objectives.",
+    "evidence": [
+      "RNN",
+      "LSTM",
+      "time dimension"
+    ],
+    "similarity_score": 0.07689275737615768
+  },
+  {
+    "co_code": "CO3",
+    "po_pso_code": "PO7",
+    "mapping_level": 0,
+    "confidence": 0.8,
+    "reason": "The CO does not address environmental or sustainability considerations, providing no meaningful link to PO7.",
+    "evidence": [],
+    "similarity_score": 0.044197530344611324
+  },
+  {
+    "co_code": "CO3",
+    "po_pso_code": "PO8",
+    "mapping_level": 0,
+    "confidence": 0.8,
+    "reason": "No ethical, legal, or social issues are discussed in the CO, so it does not contribute to PO8.",
+    "evidence": [],
+    "similarity_score": 0.019866505705340626
+  },
+  {
+    "co_code": "CO3",
+    "po_pso_code": "PO10",
+    "mapping_level": 1,
+    "confidence": 0.6,
+    "reason": "CO3 involves learning new deep learning models, supporting life\u2011long learning but not directly.",
+    "evidence": [
+      "learning new models",
+      "time dimension"
+    ],
+    "similarity_score": 0.16254919003701895
+  },
+  {
+    "co_code": "CO3",
+    "po_pso_code": "PO11",
+    "mapping_level": 0,
+    "confidence": 0.9,
+    "reason": "CO3 does not address communication skills.",
+    "evidence": [],
+    "similarity_score": 0.042380229674686694
+  },
+  {
+    "co_code": "CO3",
+    "po_pso_code": "PO12",
+    "mapping_level": 2,
+    "confidence": 0.7,
+    "reason": "CO3 includes analysis of architectures, touching on computational complexity.",
+    "evidence": [
+      "complexity",
+      "architecture comparison"
+    ],
+    "similarity_score": 0.10474959192435285
+  },
+  {
+    "co_code": "CO3",
+    "po_pso_code": "PSO1",
+    "mapping_level": 2,
+    "confidence": 0.7,
+    "reason": "CO3 supports analysis of theoretical concepts in IT.",
+    "evidence": [
+      "analysis",
+      "architectures"
+    ],
+    "similarity_score": 0.10948735097385232
+  },
+  {
+    "co_code": "CO3",
+    "po_pso_code": "PSO2",
+    "mapping_level": 0,
+    "confidence": 0.8,
+    "reason": "CO3 does not cover computing infrastructure or operations.",
+    "evidence": [],
+    "similarity_score": 0.06013968396025661
+  },
+  {
+    "co_code": "CO3",
+    "po_pso_code": "PSO3",
+    "mapping_level": 0,
+    "confidence": 0.9,
+    "reason": "CO3 does not address business processes or ethics.",
+    "evidence": [],
+    "similarity_score": 0.04018546105746874
+  },
+  {
+    "co_code": "CO3",
+    "po_pso_code": "PSO4",
+    "mapping_level": 0,
+    "confidence": 0.9,
+    "reason": "CO focuses on technical comparison, lacking communication or decision\u2011making aspects required by PSO4.",
+    "evidence": [
+      "technical comparison",
+      "time\u2011dimension modeling"
+    ],
+    "similarity_score": 0.09320023962304036
+  },
+  {
+    "co_code": "CO4",
+    "po_pso_code": "PO1",
+    "mapping_level": 2,
+    "confidence": 0.7,
+    "reason": "Understanding autoencoders provides foundational engineering knowledge supporting PO1.",
+    "evidence": [
+      "unsupervised learning",
+      "autoencoders"
+    ],
+    "similarity_score": 0.19988550497680363
+  },
+  {
+    "co_code": "CO4",
+    "po_pso_code": "PO2",
+    "mapping_level": 1,
+    "confidence": 0.6,
+    "reason": "CO offers conceptual support but does not directly enable problem definition or systematic solution.",
+    "evidence": [
+      "data interpretation",
+      "unsupervised learning"
+    ],
+    "similarity_score": 0.17296087794163997
+  },
+  {
+    "co_code": "CO4",
+    "po_pso_code": "PO3",
+    "mapping_level": 1,
+    "confidence": 0.55,
+    "reason": "CO supplies conceptual knowledge, not design or implementation of software systems.",
+    "evidence": [
+      "autoencoders",
+      "software design"
+    ],
+    "similarity_score": 0.12795084721656486
+  },
+  {
+    "co_code": "CO4",
+    "po_pso_code": "PO4",
+    "mapping_level": 1,
+    "confidence": 0.5,
+    "reason": "CO provides conceptual background, not schematic solution formulation.",
+    "evidence": [
+      "autoencoders",
+      "complex problem"
+    ],
+    "similarity_score": 0.12373243903776397
+  },
+  {
+    "co_code": "CO4",
+    "po_pso_code": "PO5",
+    "mapping_level": 1,
+    "confidence": 0.55,
+    "reason": "CO explains algorithms, not active use of modern engineering tools.",
+    "evidence": [
+      "autoencoders",
+      "frameworks"
+    ],
+    "similarity_score": 0.03223624886280908
+  },
+  {
+    "co_code": "CO4",
+    "po_pso_code": "PO6",
+    "mapping_level": 2,
+    "confidence": 0.7,
+    "reason": "CO4 provides conceptual understanding of unsupervised DL algorithms, supporting PO6's requirement to apply algorithmic principles.",
+    "evidence": [
+      "unsupervised DL",
+      "Autoencoders"
+    ],
+    "similarity_score": 0.15120908668432378
+  },
+  {
+    "co_code": "CO4",
+    "po_pso_code": "PO7",
+    "mapping_level": 0,
+    "confidence": 0.9,
+    "reason": "CO4 does not address environmental sustainability aspects.",
+    "evidence": [],
+    "similarity_score": 0.00388225325498974
+  },
+  {
+    "co_code": "CO4",
+    "po_pso_code": "PO8",
+    "mapping_level": 0,
+    "confidence": 0.9,
+    "reason": "CO4 does not cover ethical, legal, or social issues.",
+    "evidence": [],
+    "similarity_score": 0.09333673433605227
+  },
+  {
+    "co_code": "CO4",
+    "po_pso_code": "PO10",
+    "mapping_level": 1,
+    "confidence": 0.6,
+    "reason": "CO4 introduces unsupervised DL concepts, encouraging ongoing learning.",
+    "evidence": [
+      "unsupervised DL"
+    ],
+    "similarity_score": 0.0786153468065752
+  },
+  {
+    "co_code": "CO4",
+    "po_pso_code": "PO11",
+    "mapping_level": 0,
+    "confidence": 0.9,
+    "reason": "CO4 does not involve communication skills.",
+    "evidence": [],
+    "similarity_score": 0.11874608256863502
+  },
+  {
+    "co_code": "CO4",
+    "po_pso_code": "PSO1",
+    "mapping_level": 2,
+    "confidence": 0.7,
+    "reason": "CO4 provides conceptual foundation for applying unsupervised DL in IT systems, aligning with PSO1.",
+    "evidence": [
+      "unsupervised DL",
+      "Autoencoders"
+    ],
+    "similarity_score": 0.044593505077116236
+  },
+  {
+    "co_code": "CO4",
+    "po_pso_code": "PSO2",
+    "mapping_level": 1,
+    "confidence": 0.6,
+    "reason": "CO4 provides conceptual knowledge of unsupervised DL algorithms, which only tangentially supports the infrastructure\u2011analysis focus of PSO2.",
+    "evidence": [
+      "unsupervised DL",
+      "Autoencoders"
+    ],
+    "similarity_score": 0.18421511253686157
+  },
+  {
+    "co_code": "CO4",
+    "po_pso_code": "PSO3",
+    "mapping_level": 0,
+    "confidence": 0.9,
+    "reason": "CO4 does not address professional, business, or ethical issues required by PSO3.",
+    "evidence": [],
+    "similarity_score": 0.011572784242120725
+  },
+  {
+    "co_code": "CO4",
+    "po_pso_code": "PSO4",
+    "mapping_level": 0,
+    "confidence": 0.9,
+    "reason": "CO4 lacks any communication or decision\u2011making component needed for PSO4.",
+    "evidence": [],
+    "similarity_score": -0.056103673100062465
+  },
+  {
+    "co_code": "CO5",
+    "po_pso_code": "PO1",
+    "mapping_level": 2,
+    "confidence": 0.7,
+    "reason": "CO5\u2019s analysis of advanced DL techniques supports core engineering foundations, aligning with PO1 at a moderate level.",
+    "evidence": [
+      "representation learning",
+      "transfer learning"
+    ],
+    "similarity_score": 0.1453615221160824
+  },
+  {
+    "co_code": "CO5",
+    "po_pso_code": "PO2",
+    "mapping_level": 2,
+    "confidence": 0.75,
+    "reason": "CO5 involves systematic exploration and experimental analysis, directly supporting the problem\u2011definition and solution\u2011design aspects of PO2.",
+    "evidence": [
+      "explore",
+      "experiments"
+    ],
+    "similarity_score": 0.04274104324256124
+  },
+  {
+    "co_code": "CO5",
+    "po_pso_code": "PO3",
+    "mapping_level": 1,
+    "confidence": 0.6,
+    "reason": "CO5 offers conceptual understanding of CNN variants but does not entail full design, implementation, or evaluation of a software system required by PO3.",
+    "evidence": [
+      "CNN variants",
+      "transfer learning"
+    ],
+    "similarity_score": -0.007251643791211315
+  },
+  {
+    "co_code": "CO5",
+    "po_pso_code": "PO4",
+    "mapping_level": 2,
+    "confidence": 0.6,
+    "reason": "CO5 explores and evaluates representation learning techniques, providing benchmarking and ablation studies that support schematic problem solutions.",
+    "evidence": [
+      "benchmarking",
+      "ablation studies"
+    ],
+    "similarity_score": 0.1470286672927474
+  },
+  {
+    "co_code": "CO5",
+    "po_pso_code": "PO5",
+    "mapping_level": 3,
+    "confidence": 0.9,
+    "reason": "CO5 requires hands\u2011on use of modern deep learning frameworks (TensorFlow, PyTorch) and GPU tools, directly fulfilling the modern engineering tool usage requirement.",
+    "evidence": [
+      "TensorFlow",
+      "PyTorch"
+    ],
+    "similarity_score": -0.010036379543046814
+  },
+  {
+    "co_code": "CO5",
+    "po_pso_code": "PO7",
+    "mapping_level": 1,
+    "confidence": 0.4,
+    "reason": "CO5 may touch on computational efficiency but does not explicitly address environmental or societal impacts, providing only a peripheral connection.",
+    "evidence": [
+      "GPU energy",
+      "inference latency"
+    ],
+    "similarity_score": -0.07453722349954917
+  },
+  {
+    "co_code": "CO5",
+    "po_pso_code": "PO8",
+    "mapping_level": 1,
+    "confidence": 0.4,
+    "reason": "CO5 could involve ethical considerations such as bias or privacy, yet it lacks explicit coverage of professional or legal responsibilities.",
+    "evidence": [
+      "bias mitigation",
+      "dataset privacy"
+    ],
+    "similarity_score": 0.014087923994515302
+  },
+  {
+    "co_code": "CO5",
+    "po_pso_code": "PO10",
+    "mapping_level": 2,
+    "confidence": 0.6,
+    "reason": "CO5 encourages continuous learning of emerging deep learning techniques, supporting life\u2011long learning objectives.",
+    "evidence": [
+      "new techniques",
+      "continuous upskilling"
+    ],
+    "similarity_score": 0.11053921890092272
+  },
+  {
+    "co_code": "CO5",
+    "po_pso_code": "PO11",
+    "mapping_level": 0,
+    "confidence": 0.9,
+    "reason": "CO5 contains no communication or presentation component, thus no contribution to communication skills.",
+    "evidence": [],
+    "similarity_score": 0.05354476764792272
+  },
+  {
+    "co_code": "CO5",
+    "po_pso_code": "PSO1",
+    "mapping_level": 2,
+    "confidence": 0.6,
+    "reason": "CO5 provides technical foundation for IT systems, supporting PSO1\u2019s general application of IT concepts.",
+    "evidence": [
+      "representation learning",
+      "transfer learning"
+    ],
+    "similarity_score": 0.03654029974076789
+  },
+  {
+    "co_code": "CO5",
+    "po_pso_code": "PSO2",
+    "mapping_level": 0,
+    "confidence": 0.9,
+    "reason": "CO5 does not address computing infrastructure or large\u2011scale system requirements of PSO2.",
+    "evidence": [],
+    "similarity_score": 0.0069732340356708986
+  },
+  {
+    "co_code": "CO5",
+    "po_pso_code": "PSO3",
+    "mapping_level": 0,
+    "confidence": 0.9,
+    "reason": "CO5 lacks coverage of business, ethical, or legal aspects required by PSO3.",
+    "evidence": [],
+    "similarity_score": -0.06019960395459265
+  },
+  {
+    "co_code": "CO5",
+    "po_pso_code": "PSO4",
+    "mapping_level": 0,
+    "confidence": 0.9,
+    "reason": "CO5 does not involve communication or decision\u2011making skills emphasized in PSO4.",
+    "evidence": [],
+    "similarity_score": 0.04092691473548969
+  },
+  {
+    "co_code": "CO6",
+    "po_pso_code": "PO1",
+    "mapping_level": 3,
+    "confidence": 0.9,
+    "reason": "CO6 directly involves engineering solution design and evaluation, fulfilling PO1\u2019s engineering focus.",
+    "evidence": [
+      "performance evaluation",
+      "real\u2011world applications"
+    ],
+    "similarity_score": 0.20491808143734094
+  },
+  {
+    "co_code": "CO6",
+    "po_pso_code": "PO2",
+    "mapping_level": 3,
+    "confidence": 0.9,
+    "reason": "CO6 requires problem definition, experimentation, analysis, and solution provision, aligning with PO2.",
+    "evidence": [
+      "experiments",
+      "analysis",
+      "solution"
+    ],
+    "similarity_score": 0.19554259527515527
+  },
+  {
+    "co_code": "CO6",
+    "po_pso_code": "PO3",
+    "mapping_level": 3,
+    "confidence": 0.95,
+    "reason": "CO6 directly involves designing and deploying deep learning solutions, aligning with PO3's focus on software/system design and evaluation.",
+    "evidence": [
+      "end-to-end solution",
+      "software design"
+    ],
+    "similarity_score": 0.2632070879501335
+  },
+  {
+    "co_code": "CO6",
+    "po_pso_code": "PO4",
+    "mapping_level": 3,
+    "confidence": 0.95,
+    "reason": "CO6 requires formulating and providing solutions to real-world problems, matching PO4's emphasis on complex problem formulation and schematic solutions.",
+    "evidence": [
+      "problem formulation",
+      "solution design"
+    ],
+    "similarity_score": 0.14072706425751247
+  },
+  {
+    "co_code": "CO6",
+    "po_pso_code": "PO5",
+    "mapping_level": 3,
+    "confidence": 0.95,
+    "reason": "CO6 necessitates use of modern deep learning frameworks, satisfying PO5's requirement for modern engineering tool usage.",
+    "evidence": [
+      "deep learning frameworks",
+      "modern tools"
+    ],
+    "similarity_score": 0.12101924466373386
+  },
+  {
+    "co_code": "CO6",
+    "po_pso_code": "PO6",
+    "mapping_level": 3,
+    "confidence": 0.95,
+    "reason": "CO6 applies mathematical foundations and algorithmic principles in modeling and design, directly supporting PO6.",
+    "evidence": [
+      "mathematical foundations",
+      "algorithmic principles"
+    ],
+    "similarity_score": 0.11629033349235901
+  },
+  {
+    "co_code": "CO6",
+    "po_pso_code": "PO7",
+    "mapping_level": 1,
+    "confidence": 0.85,
+    "reason": "CO6 touches on environmental impact only indirectly through resource efficiency considerations, providing a peripheral connection to PO7.",
+    "evidence": [
+      "resource efficiency",
+      "environmental impact"
+    ],
+    "similarity_score": 0.08933184314928874
+  },
+  {
+    "co_code": "CO6",
+    "po_pso_code": "PO8",
+    "mapping_level": 1,
+    "confidence": 0.85,
+    "reason": "CO6 addresses ethical aspects such as fairness and privacy only in passing, offering a minor link to PO8.",
+    "evidence": [
+      "ethical considerations",
+      "bias mitigation"
+    ],
+    "similarity_score": 0.07275858881866051
+  },
+  {
+    "co_code": "CO6",
+    "po_pso_code": "PO9",
+    "mapping_level": 0,
+    "confidence": 0.95,
+    "reason": "CO6 does not address teamwork or individual collaboration.",
+    "evidence": [
+      "no teamwork"
+    ],
+    "similarity_score": 0.13231364654747224
+  },
+  {
+    "co_code": "CO6",
+    "po_pso_code": "PO10",
+    "mapping_level": 1,
+    "confidence": 0.8,
+    "reason": "CO6 involves learning new techniques but lacks explicit emphasis on continuous professional development.",
+    "evidence": [
+      "learning new techniques"
+    ],
+    "similarity_score": 0.11753135687873734
+  },
+  {
+    "co_code": "CO6",
+    "po_pso_code": "PO11",
+    "mapping_level": 0,
+    "confidence": 0.95,
+    "reason": "CO6 does not involve communication or presentation activities.",
+    "evidence": [
+      "no communication"
+    ],
+    "similarity_score": 0.13385503802837087
+  },
+  {
+    "co_code": "CO6",
+    "po_pso_code": "PO12",
+    "mapping_level": 2,
+    "confidence": 0.85,
+    "reason": "CO6 evaluates algorithm performance, implicitly covering computational complexity and optimization.",
+    "evidence": [
+      "performance evaluation",
+      "complexity"
+    ],
+    "similarity_score": 0.1235495654690904
+  },
+  {
+    "co_code": "CO6",
+    "po_pso_code": "PSO1",
+    "mapping_level": 2,
+    "confidence": 0.9,
+    "reason": "CO6 supports applying theoretical concepts in design and development of solutions.",
+    "evidence": [
+      "apply concepts",
+      "design solutions"
+    ],
+    "similarity_score": 0.19007805150995655
+  },
+  {
+    "co_code": "CO6",
+    "po_pso_code": "PSO2",
+    "mapping_level": 1,
+    "confidence": 0.75,
+    "reason": "CO6 may touch on infrastructure needs indirectly through performance evaluation.",
+    "evidence": [
+      "performance evaluation"
+    ],
+    "similarity_score": 0.33200641157419075
+  },
+  {
+    "co_code": "CO6",
+    "po_pso_code": "PSO3",
+    "mapping_level": 0,
+    "confidence": 0.95,
+    "reason": "CO6 focuses on technical evaluation and solution design, lacking business process or ethical considerations.",
+    "evidence": [
+      "technical evaluation",
+      "solution design"
+    ],
+    "similarity_score": 0.03750580046460683
+  },
+  {
+    "co_code": "CO6",
+    "po_pso_code": "PSO4",
+    "mapping_level": 1,
+    "confidence": 0.7,
+    "reason": "CO6 involves decision\u2011making in algorithm selection but does not explicitly address communication skills.",
+    "evidence": [
+      "decision\u2011making",
+      "algorithm selection"
+    ],
+    "similarity_score": 0.09560073907480637
+  }
+]

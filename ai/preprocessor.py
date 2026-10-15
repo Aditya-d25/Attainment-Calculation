@@ -184,3 +184,36 @@ def get_enhanced_text(preprocessed: Dict) -> str:
         parts.append("Key actions: " + ", ".join(preprocessed["action_verbs"]))
 
     return ". ".join(parts)
+
+
+BLOOM_LEVELS = {
+    "L1_Remember": {"define", "recall", "recognize", "list", "state", "identify", "name"},
+    "L2_Understand": {"understand", "describe", "explain", "interpret", "classify", "summarize", "discuss", "distinguish", "illustrate", "elaborate"},
+    "L3_Apply": {"apply", "implement", "use", "execute", "solve", "demonstrate", "calculate", "compute", "operate", "practice"},
+    "L4_Analyze": {"analyze", "differentiate", "examine", "investigate", "categorize", "compare", "contrast", "explore", "deconstruct"},
+    "L5_Evaluate": {"evaluate", "assess", "justify", "critique", "judge", "appraise", "benchmark"},
+    "L6_Create": {"create", "design", "develop", "construct", "produce", "formulate", "provide", "solution", "build", "generate", "deploy"},
+}
+
+
+def get_bloom_level(text: str) -> str:
+    """Classify the cognitive domain level of an educational outcome."""
+    normalized = normalize_text(text)
+    words = set(re.findall(r'\b[a-z]+\b', normalized))
+
+    if "provide solution" in normalized or "provide solutions" in normalized or "real-world application" in normalized:
+        return "L6 - Create/Synthesis"
+
+    for level, verbs in [
+        ("L6 - Create", BLOOM_LEVELS["L6_Create"]),
+        ("L5 - Evaluate", BLOOM_LEVELS["L5_Evaluate"]),
+        ("L4 - Analyze", BLOOM_LEVELS["L4_Analyze"]),
+        ("L3 - Apply", BLOOM_LEVELS["L3_Apply"]),
+        ("L2 - Understand", BLOOM_LEVELS["L2_Understand"]),
+        ("L1 - Remember", BLOOM_LEVELS["L1_Remember"]),
+    ]:
+        if words.intersection(verbs):
+            return level
+
+    return "L2 - Understand"
+

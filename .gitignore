@@ -23,6 +23,8 @@ uploads/*
 test.db
 chroma_db/
 scratch/
+*.log
+test_log*
 
 
 # OS generated files

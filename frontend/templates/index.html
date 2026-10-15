@@ -5,56 +5,138 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CO-PO Mapping Agent</title>
-  <link rel="stylesheet" href="/static/style.css?v=2.2">
+  <link rel="stylesheet" href="/static/style.css?v=3.9">
+  <!-- Lottie Animation Player for AI Loading Screens -->
+  <script src="/static/vendor/lottie.min.js"></script>
 </head>
 
 <body>
 
   <header class="topbar">
-    <a class="brand" href="#">◈ CO-PO Mapping Agent</a>
+    <a class="brand" href="/">◈ CO-PO Mapping Agent</a>
     <p>Automated CO-PO Syllabus Extraction & AI Mapping</p>
     <div id="mode-badge" class="status">Connecting…</div>
+
+    <!-- Authenticated Faculty User Profile Badge -->
+    <div id="user-profile-badge" class="user-profile-pill">
+      <span class="pulse-dot-online"></span>
+      <span id="user-name-display" class="user-name">{{ user.name if user and user.name else 'Faculty' }}</span>
+    </div>
+
+    <!-- Temporary Button to Truncate Database -->
+    <button type="button" id="btn-truncate-db" class="button-truncate" title="Wipe entire database to test syllabus upload and LLM models fresh">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+      </svg>
+      <span>Truncate DB</span>
+    </button>
+
+    <!-- Prominent Logout Button -->
+    <a href="/logout" id="btn-logout" class="button-logout" title="Sign out of portal">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+        <polyline points="16 17 21 12 16 7"></polyline>
+        <line x1="21" y1="12" x2="9" y2="12"></line>
+      </svg>
+      <span>Logout</span>
+    </a>
   </header>
 
   <main>
-    <!-- WORKFLOW STEPPER -->
-    <div class="stepper-container">
-      <div class="stepper">
-        <div class="step-item" id="step-1-indicator">
-          <div class="step-circle">1</div>
-          <div class="step-label">Upload Syllabus PDF</div>
+    <!-- CASCADING CURRICULUM SELECTOR -->
+    <section class="hierarchy-section">
+      <div class="hierarchy-card">
+        <div class="hierarchy-header">
+          <div>
+            <span class="section-kicker">ACADEMIC CURRICULUM HIERARCHY</span>
+            <h2>Select Course for Outcome Attainment</h2>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button type="button" id="btn-truncate-db-inline" class="button danger small" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5; font-weight: 600; cursor: pointer; border-radius: 8px; padding: 6px 12px; display: inline-flex; align-items: center; gap: 6px;" title="Wipe entire database to re-test syllabus upload and models">
+              🗑️ Truncate DB
+            </button>
+            <button type="button" id="btn-reset-hierarchy" class="button secondary small" title="Reset all selections">
+              ↺ Reset Filter
+            </button>
+          </div>
         </div>
-        <div class="step-line"></div>
-        <div class="step-item active" id="step-2-indicator">
-          <div class="step-circle">2</div>
-          <div class="step-label">Select Course & Edit Outcomes</div>
-        </div>
-        <div class="step-line"></div>
-        <div class="step-item" id="step-3-indicator">
-          <div class="step-circle">3</div>
-          <div class="step-label">Generate CO-PO Matrix</div>
+
+        <div class="hierarchy-grid">
+          <!-- Step 1: Academic Year -->
+          <div class="hierarchy-field" id="field-year">
+            <label for="year-select">
+              <span class="field-step">1</span>
+              <span>Academic Year</span>
+            </label>
+            <div class="custom-select-wrapper" id="wrapper-year-select">
+              <button type="button" class="custom-select-trigger" id="trigger-year-select" aria-haspopup="listbox" aria-expanded="false">
+                <span class="trigger-label">-- Select Year --</span>
+                <svg class="chevron-icon" viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+                  <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd"/>
+                </svg>
+              </button>
+              <div class="custom-select-menu" id="menu-year-select" role="listbox" style="display: none;"></div>
+            </div>
+            <select id="year-select" class="visually-hidden-select">
+              <option value="">-- Select Year --</option>
+            </select>
+          </div>
+
+          <!-- Step 2: Department -->
+          <div class="hierarchy-field" id="field-dept">
+            <label for="dept-select">
+              <span class="field-step">2</span>
+              <span>Department</span>
+            </label>
+            <div class="custom-select-wrapper" id="wrapper-dept-select">
+              <button type="button" class="custom-select-trigger disabled" id="trigger-dept-select" aria-haspopup="listbox" aria-expanded="false" disabled>
+                <span class="trigger-label">-- First Select Year --</span>
+                <svg class="chevron-icon" viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+                  <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd"/>
+                </svg>
+              </button>
+              <div class="custom-select-menu" id="menu-dept-select" role="listbox" style="display: none;"></div>
+            </div>
+            <select id="dept-select" class="visually-hidden-select" disabled>
+              <option value="">-- First Select Year --</option>
+            </select>
+          </div>
+
+          <!-- Step 3: Subject / Course -->
+          <div class="hierarchy-field" id="field-course">
+            <label for="course-select">
+              <span class="field-step">3</span>
+              <span>Subject / Course</span>
+            </label>
+            <div class="custom-select-wrapper" id="wrapper-course-select">
+              <button type="button" class="custom-select-trigger disabled" id="trigger-course-select" aria-haspopup="listbox" aria-expanded="false" disabled>
+                <span class="trigger-label">-- First Select Department --</span>
+                <svg class="chevron-icon" viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+                  <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd"/>
+                </svg>
+              </button>
+              <div class="custom-select-menu" id="menu-course-select" role="listbox" style="display: none;"></div>
+            </div>
+            <select id="course-select" class="visually-hidden-select" disabled>
+              <option value="">-- First Select Department --</option>
+            </select>
+          </div>
         </div>
       </div>
-    </div>
+    </section>
 
-    <!-- HERO & UPLOAD SECTION -->
-    <section class="hero-section">
-      <div class="hero-text">
-        <p class="eyebrow">AUTOMATED ACADEMIC CURRICULUM EXTRACTOR</p>
-        <h1>Upload Syllabus PDF.<br><em>Extract COs & POs automatically.</em></h1>
-        <p class="lead">
-          Upload any engineering syllabus PDF (e.g. SPPU TE 2024 NEP-2020 or BE 2019 curriculum).
-          Program Outcomes (POs/PSOs) and course-wise Course Outcomes (COs) are automatically extracted.
-          Select any course to view, edit, or adjust outcomes, and proceed towards explainable AI CO-PO matrix generation.
-        </p>
-      </div>
+    <!-- DYNAMIC WORKSPACE PANELS -->
 
-      <!-- SINGLE PDF UPLOAD CARD -->
-      <div class="upload-card">
+    <!-- UPLOAD SYLLABUS PDF SECTION -->
+    <section id="state-upload-syllabus" class="workspace-panel">
+      <div class="upload-needed-card">
         <div class="upload-header">
           <span class="upload-icon">📄</span>
-          <h3>Upload Syllabus PDF</h3>
-          <p class="muted">Extracts shared POs/PSOs & all courses with their COs</p>
+          <span class="section-kicker" id="upload-kicker">ACADEMIC SYLLABUS EXTRACTION</span>
+          <h2 id="upload-section-title">Upload Syllabus PDF</h2>
+          <p class="muted" id="upload-section-subtitle">
+            Upload university engineering syllabus PDF (e.g. SPPU, AICTE, NEP-2020) to extract Program Outcomes (POs/PSOs), courses, and Course Outcomes (COs) into the database.
+          </p>
         </div>
 
         <form id="pdf-upload-form" class="upload-form"
@@ -65,136 +147,140 @@
           </div>
 
           <button type="button" id="upload-btn" onclick="handlePDFUpload(event)" class="button primary block">
-            Extract POs & COs from PDF
+            Extract POs & COs from PDF & Save to Database
           </button>
         </form>
         <div id="upload-status" class="upload-status"></div>
       </div>
     </section>
 
-    <!-- COURSE SELECTOR BAR -->
-    <section class="selector-section">
-      <div class="selector-card">
-        <div class="selector-info">
-          <span class="section-kicker">SELECT COURSE FOR OUTCOME REVIEW & MAPPING</span>
-          <h2 id="current-framework-name">Framework: Upload Syllabus PDF to extract outcomes</h2>
-          <p id="current-framework-details" class="muted">Academic Year: 2025-26 | Department: E&TC</p>
+    <!-- STATE 2: COURSE SELECTED AND HAS OUTCOMES IN DB -->
+    <section id="state-has-outcomes" class="workspace-panel" style="display: none;">
+      
+      <!-- MAIN TABS -->
+      <nav class="tabs">
+        <button class="active" data-tab="outcomes-tab" id="tab-btn-outcomes">Outcomes & Management</button>
+        <button data-tab="matrix-tab" id="tab-btn-matrix">Mapping Matrix</button>
+        <button data-tab="export-tab" id="tab-btn-export">Export & Download</button>
+      </nav>
+
+      <!-- PAGE 1: OUTCOMES & MANAGEMENT -->
+      <section id="outcomes-tab" class="page active">
+        <!-- Proceed banner -->
+        <div class="proceed-banner">
+          <div class="proceed-info">
+            <h3 id="selected-course-banner-title">Course Outcomes & Program Outcomes</h3>
+            <p id="selected-course-banner-sub" class="muted">
+              Outcomes loaded from database. Verify or modify outcomes below, then proceed to AI matrix calculation.
+            </p>
+          </div>
+          <button id="proceed-matrix-btn" class="button primary large proceed-cta">
+            Proceed to CO-PO Matrix Generation →
+          </button>
         </div>
-        <div class="selector-control">
-          <label for="course-select"><b>Select Course from List:</b></label>
-          <select id="course-select">
-            <option value="">-- Upload PDF or Select a Course --</option>
-          </select>
-        </div>
-      </div>
-    </section>
 
-    <!-- MAIN TABS -->
-    <nav class="tabs">
-      <button class="active" data-tab="outcomes-tab" id="tab-btn-outcomes">Outcomes & Management</button>
-      <button data-tab="matrix-tab" id="tab-btn-matrix">Mapping Matrix</button>
-      <button data-tab="export-tab" id="tab-btn-export">Export & Download</button>
-    </nav>
-
-    <!-- PAGE 1: OUTCOMES & MANAGEMENT -->
-    <section id="outcomes-tab" class="page active">
-
-      <!-- PROCEED CALL-TO-ACTION BANNER -->
-      <div class="proceed-banner">
-        <div class="proceed-info">
-          <h3 id="selected-course-banner-title">Select a course to view and edit outcomes</h3>
-          <p id="selected-course-banner-sub" class="muted">
-            Verify and customize the extracted Course Outcomes (COs) and Program Outcomes (POs) below. When ready, click
-            to proceed towards generating the CO-PO mapping matrix.
-          </p>
-        </div>
-        <button id="proceed-matrix-btn" class="button primary large proceed-cta">
-          Approve & Proceed to CO-PO Matrix Generation →
-        </button>
-      </div>
-
-      <div class="grid two">
-
-        <!-- COURSE OUTCOMES (COs) -->
-        <article class="card">
-          <div class="card-header">
-            <div>
-              <span class="section-kicker">COURSE SPECIFIC OUTCOMES</span>
-              <div class="card-title-row">
-                <h2 id="co-card-title">Course Outcomes (COs)</h2>
-                <span id="co-count-badge" class="badge">0 COs</span>
+        <div class="grid two">
+          <!-- COURSE OUTCOMES (COs) -->
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <span class="section-kicker">COURSE SPECIFIC OUTCOMES</span>
+                <div class="card-title-row">
+                  <h2 id="co-card-title">Course Outcomes (COs)</h2>
+                  <span id="co-count-badge" class="badge">0 COs</span>
+                </div>
+                <p class="muted">Stored in database for this subject. Click "Edit" to modify or "Remove" to delete.</p>
               </div>
-              <p class="muted">Reflected for selected course. Click "Edit" to modify or "Remove" to delete.</p>
+              <button id="add-co-btn" class="button secondary small">+ Add CO</button>
             </div>
-            <button id="add-co-btn" class="button secondary small">+ Add CO</button>
-          </div>
-          <div id="co-list-container" class="item-list">
-            <div class="empty-state">Select a course from the list above to view its Course Outcomes.</div>
-          </div>
-        </article>
+            <div id="co-list-container" class="item-list"></div>
+          </article>
 
-        <!-- PROGRAM OUTCOMES (POs / PSOs) -->
-        <article class="card">
-          <div class="card-header">
-            <div>
-              <span class="section-kicker">SHARED PROGRAMME FRAMEWORK</span>
-              <div class="card-title-row">
-                <h2 id="po-card-title">Program Outcomes (POs / PSOs)</h2>
-                <span id="po-count-badge" class="badge">0 POs</span>
+          <!-- PROGRAM OUTCOMES (POs / PSOs) -->
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <span class="section-kicker">SHARED PROGRAMME FRAMEWORK</span>
+                <div class="card-title-row">
+                  <h2 id="po-card-title">Program Outcomes (POs / PSOs)</h2>
+                  <span id="po-count-badge" class="badge">0 POs</span>
+                </div>
+                <p class="muted">Shared for all courses in this academic stream.</p>
               </div>
-              <p class="muted">Shared for all courses in this academic stream. Fully editable & manageable.</p>
+              <button id="add-po-btn" class="button secondary small">+ Add PO/PSO</button>
             </div>
-            <button id="add-po-btn" class="button secondary small">+ Add PO/PSO</button>
+            <div id="po-list-container" class="item-list"></div>
+          </article>
+        </div>
+
+        <!-- BOTTOM ACTION BAR -->
+        <div class="outcomes-footer-bar">
+          <div class="footer-status">
+            <span class="status-indicator-dot"></span>
+            <span id="footer-status-text">Outcomes verified and ready for mapping</span>
           </div>
-          <div id="po-list-container" class="item-list">
-            <div class="empty-state">Upload or select a syllabus framework to view its Program Outcomes.</div>
+          <button id="proceed-matrix-btn-bottom" class="button primary">
+            Proceed to CO-PO Matrix Generation →
+          </button>
+        </div>
+      </section>
+
+      <!-- PAGE 2: MAPPING MATRIX -->
+      <section id="matrix-tab" class="page">
+        <div class="matrix-head">
+          <div>
+            <span class="section-kicker">AI MAPPING & FACULTY CALIBRATION</span>
+            <h2 id="matrix-course-title">Mapping Matrix</h2>
+            <p class="muted">Click any cell for AI reasoning & evidence. Double-click to override mapping level with audit rationale.</p>
           </div>
+          <div class="matrix-actions">
+            <button id="back-outcomes-btn" class="button secondary">← Edit Outcomes</button>
+            <button id="generate-btn" class="button primary">Generate Mapping Matrix ⟳</button>
+          </div>
+        </div>
+
+        <!-- INLINE MAPPING GENERATION ANIMATED LOADING STATE -->
+        <div id="matrix-loading-state" class="matrix-loading-box" style="display: none;">
+          <div class="inline-loader-card">
+            <div class="loader-top-badge">
+              <span class="loader-pulse-glow"></span>
+              <span class="loader-badge-text">AI Mapping Engine Active</span>
+            </div>
+
+            <div class="loader-animation-container" id="lottie-bot-container">
+              <!-- SVG Lottie Animation rendered here -->
+            </div>
+
+            <h3 id="loader-title" class="loader-title">Analyzing CO-PO Correlations...</h3>
+            <p id="loader-subtitle" class="loader-subtitle">Evaluating Bloom's Taxonomy cognitive alignment and computing explainable mapping levels.</p>
+
+            <div class="loader-progress-track">
+              <div class="loader-progress-bar"></div>
+            </div>
+
+            <div class="loader-status-ticker" id="loader-ticker">
+              <span class="ticker-dot"></span>
+              <span id="loader-ticker-text">Synthesizing course context & competency frameworks...</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="matrix-empty" class="empty">Click 'Generate Mapping Matrix' above to compute CO-PO alignments.</div>
+        <div id="matrix-wrap"></div>
+      </section>
+
+      <!-- PAGE 3: EXPORT & DOWNLOAD -->
+      <section id="export-tab" class="page">
+        <article class="export-card">
+          <div>
+            <span class="section-kicker">EXPORT TO EXCEL</span>
+            <h2>Download Approved CO-PO Matrix</h2>
+            <p>Generates an official Excel workbook with mapping levels, AI reasoning explanations, and faculty audit trail.</p>
+          </div>
+          <button id="export-button" class="button primary">Download Excel (.xlsx)</button>
         </article>
+      </section>
 
-      </div>
-
-      <!-- BOTTOM ACTION BAR -->
-      <div class="outcomes-footer-bar">
-        <div class="footer-status">
-          <span class="status-indicator-dot"></span>
-          <span id="footer-status-text">Select course and review outcomes</span>
-        </div>
-        <button id="proceed-matrix-btn-bottom" class="button primary">
-          Approve & Proceed to CO-PO Matrix Generation →
-        </button>
-      </div>
-    </section>
-
-    <!-- PAGE 2: MAPPING MATRIX -->
-    <section id="matrix-tab" class="page">
-      <div class="matrix-head">
-        <div>
-          <span class="section-kicker">AI MAPPING & FACULTY CALIBRATION</span>
-          <h2 id="matrix-course-title">Mapping Matrix</h2>
-          <p class="muted">Click any cell for AI reasoning & evidence. Double-click to override mapping level with audit
-            rationale.</p>
-        </div>
-        <div class="matrix-actions">
-          <button id="back-outcomes-btn" class="button secondary">← Edit Outcomes</button>
-          <button id="generate-btn" class="button primary">Generate Mapping Matrix ⟳</button>
-        </div>
-      </div>
-      <div id="matrix-empty" class="empty">Please select a course and verify COs/POs to generate the mapping matrix.
-      </div>
-      <div id="matrix-wrap"></div>
-    </section>
-
-    <!-- PAGE 3: EXPORT -->
-    <section id="export-tab" class="page">
-      <article class="export-card">
-        <div>
-          <span class="section-kicker">EXPORT TO EXCEL</span>
-          <h2>Download Approved CO-PO Matrix</h2>
-          <p>Generates an official Excel workbook with mapping levels, AI reasoning explanations, and faculty audit
-            trail.</p>
-        </div>
-        <button id="export-button" class="button primary">Download Excel (.xlsx)</button>
-      </article>
     </section>
   </main>
 
@@ -232,8 +318,8 @@
         </label>
       </div>
 
-      <label>Code
-        <input id="modal-outcome-code" required placeholder="e.g. CO1 or PO1">
+      <label>Code (e.g. CO1, PO3, PSO1)
+        <input type="text" id="modal-outcome-code" required placeholder="CO1" />
       </label>
 
       <label>Description
@@ -273,7 +359,7 @@
 
   <div id="toast" class="toast"></div>
 
-  <script src="/static/app.js?v=2.2"></script>
+  <script src="/static/app.js?v=3.9"></script>
 </body>
 
 </html>

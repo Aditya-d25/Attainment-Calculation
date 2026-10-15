@@ -1,0 +1,457 @@
+/* ==========================================================================
+   MODERN OFF-WHITE EDUCATIONAL GLASSMORPHISM LOGIN THEME
+   Tailored to match the academic curriculum CO-PO Mapping Agent theme:
+   - Paper Canvas: #f4f6f3
+   - Academic Forest Green: #1b6348
+   - Mint Soft Accent: #d4ebd8
+   - Ink Typography: #14231e
+   - Editorial Serif: 'Playfair Display' & Clean 'DM Sans'
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap');
+
+:root {
+  --ink: #14231e;
+  --muted: #5a6e66;
+  --paper: #f4f6f3;
+  --cream: #ffffff;
+  --line: #d8e0d6;
+  --green: #1b6348;
+  --green-hover: #144e38;
+  --mint: #d4ebd8;
+  --mint-soft: #eaf5ec;
+  --glass-bg: rgba(255, 255, 255, 0.82);
+  --glass-border: rgba(255, 255, 255, 0.95);
+  
+  --radius-xl: 24px;
+  --radius-lg: 14px;
+  --radius-md: 10px;
+  --radius-pill: 9999px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  min-height: 100%;
+  width: 100%;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: var(--paper);
+  color: var(--ink);
+  overflow-x: hidden;
+  position: relative;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ==========================================================================
+   TOPBAR
+   ========================================================================== */
+
+.topbar {
+  height: 68px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.92);
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 0 max(5vw, 24px);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.brand {
+  font-weight: 700;
+  font-size: 20px;
+  text-decoration: none;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.topbar p {
+  color: var(--muted);
+  font-size: 14px;
+  flex: 1;
+  margin: 0;
+}
+
+/* ==========================================================================
+   AMBIENT BACKGROUND WITH SOFT SAGE & MINT LIGHTS
+   ========================================================================== */
+
+.ambient-background {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: 
+    radial-gradient(circle at 15% 25%, rgba(212, 235, 216, 0.45) 0%, transparent 45%),
+    radial-gradient(circle at 85% 35%, rgba(163, 205, 240, 0.3) 0%, transparent 40%),
+    radial-gradient(circle at 50% 80%, rgba(27, 99, 72, 0.08) 0%, transparent 50%),
+    var(--paper);
+}
+
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.65;
+  animation: floatOrb 22s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+.orb-emerald {
+  width: 480px;
+  height: 480px;
+  background: radial-gradient(circle, rgba(27, 99, 72, 0.16) 0%, rgba(212, 235, 216, 0.4) 60%, transparent 100%);
+  top: -80px;
+  left: 5%;
+  animation-duration: 22s;
+}
+
+.orb-mint {
+  width: 440px;
+  height: 440px;
+  background: radial-gradient(circle, rgba(212, 235, 216, 0.6) 0%, rgba(212, 235, 216, 0.1) 70%, transparent 100%);
+  bottom: 0px;
+  right: 10%;
+  animation-duration: 25s;
+  animation-delay: -6s;
+}
+
+.orb-cyan {
+  width: 360px;
+  height: 360px;
+  background: radial-gradient(circle, rgba(163, 205, 240, 0.4) 0%, transparent 70%);
+  top: 40%;
+  right: 3%;
+  animation-duration: 18s;
+  animation-delay: -10s;
+}
+
+.orb-ivory {
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, rgba(254, 243, 199, 0.5) 0%, transparent 70%);
+  bottom: 15%;
+  left: 8%;
+  animation-duration: 20s;
+  animation-delay: -14s;
+}
+
+.grid-mesh {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(rgba(216, 224, 214, 0.45) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(216, 224, 214, 0.45) 1px, transparent 1px);
+  background-size: 56px 56px;
+  opacity: 0.6;
+}
+
+@keyframes floatOrb {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(30px, 20px) scale(1.05); }
+  100% { transform: translate(-20px, 40px) scale(0.96); }
+}
+
+/* ==========================================================================
+   LOGIN VIEWPORT & CONTAINER
+   ========================================================================== */
+
+.login-viewport {
+  position: relative;
+  z-index: 10;
+  min-height: calc(100vh - 68px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.login-wrapper {
+  width: 100%;
+  max-width: 460px;
+  perspective: 1200px;
+}
+
+/* ==========================================================================
+   GLASS CARD
+   ========================================================================== */
+
+.glass-card {
+  position: relative;
+  background: var(--glass-bg);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  padding: 42px 36px 38px;
+  box-shadow: 
+    0 24px 60px -15px rgba(20, 35, 30, 0.10),
+    0 8px 24px -5px rgba(27, 99, 72, 0.06),
+    0 0 1px 1px rgba(216, 224, 214, 0.6),
+    inset 0 1px 2px 0 rgba(255, 255, 255, 1);
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s ease;
+  overflow: hidden;
+}
+
+.glass-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(27, 99, 72, 0.3) 25%, 
+    var(--green) 50%, 
+    rgba(27, 99, 72, 0.3) 75%, 
+    transparent 100%
+  );
+  opacity: 0.9;
+}
+
+.glass-reflection {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 44%,
+    rgba(255, 255, 255, 0.25) 48%,
+    rgba(255, 255, 255, 0.45) 50%,
+    rgba(255, 255, 255, 0.25) 52%,
+    transparent 56%
+  );
+  pointer-events: none;
+  transform: rotate(25deg);
+}
+
+/* ==========================================================================
+   HEADER
+   ========================================================================== */
+
+.card-header {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.card-title {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  margin-bottom: 8px;
+}
+
+.card-subtitle {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--muted);
+  max-width: 380px;
+  margin: 0 auto;
+}
+
+/* ==========================================================================
+   ACTION BUTTONS
+   ========================================================================== */
+
+.actions-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Google Gateway Button */
+.btn-google-gateway {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 13px 20px;
+  background: #ffffff;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-lg);
+  color: var(--ink);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  box-shadow: 
+    0 4px 12px rgba(20, 35, 30, 0.05),
+    0 1px 2px rgba(20, 35, 30, 0.03);
+}
+
+.btn-google-gateway:hover {
+  background: #ffffff;
+  border-color: var(--green);
+  transform: translateY(-2px);
+  box-shadow: 
+    0 10px 22px -4px rgba(27, 99, 72, 0.12),
+    0 4px 10px rgba(20, 35, 30, 0.04);
+}
+
+.btn-google-gateway:active {
+  transform: translateY(0);
+}
+
+.google-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.btn-google-text {
+  letter-spacing: -0.01em;
+}
+
+/* Divider */
+.glass-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 2px 0;
+}
+
+.divider-line {
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.divider-text {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+/* Demo Gateway Button */
+.btn-demo-gateway {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 13px 20px;
+  background: var(--mint-soft);
+  border: 1.5px solid var(--green);
+  border-radius: var(--radius-lg);
+  color: var(--green);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(27, 99, 72, 0.08);
+}
+
+.btn-demo-gateway:hover {
+  background: var(--green);
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px -3px rgba(27, 99, 72, 0.25);
+}
+
+.btn-demo-gateway:active {
+  transform: translateY(0);
+}
+
+.demo-icon {
+  font-size: 15px;
+}
+
+/* ==========================================================================
+   PORTAL FOOTER
+   ========================================================================== */
+
+.portal-footer {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* ==========================================================================
+   GLASS TOAST NOTIFICATIONS
+   ========================================================================== */
+
+.glass-toast {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%) translateY(30px);
+  padding: 11px 22px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  color: var(--ink);
+  font-size: 13.5px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 12px 30px rgba(20, 35, 30, 0.12);
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  z-index: 100;
+}
+
+.glass-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+}
+
+.glass-toast.success {
+  border-color: var(--green);
+  background: #f0fdf4;
+  color: #14532d;
+  box-shadow: 0 12px 30px rgba(27, 99, 72, 0.15);
+}
+
+.glass-toast.error {
+  border-color: #f87171;
+  background: #fef2f2;
+  color: #991b1b;
+  box-shadow: 0 12px 30px rgba(220, 38, 38, 0.15);
+}
+
+.glass-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(27, 99, 72, 0.2);
+  border-top-color: var(--green);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 500px) {
+  .glass-card {
+    padding: 32px 22px 28px;
+    border-radius: 18px;
+  }
+}

@@ -44,10 +44,10 @@ def get_db():
 def get_config():
     """Get current AI configuration (must precede the dynamic ID route)."""
     return ConfigResponse(
-        llm_provider=os.getenv("LLM_PROVIDER", "gemini"),
-        llm_model=os.getenv("LLM_MODEL", "gemini-flash-latest"),
+        llm_provider=os.getenv("LLM_PROVIDER", "groq"),
+        llm_model=os.getenv("LLM_MODEL", "openai/gpt-oss-120b"),
         embedding_model=os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2"),
-        mock_mode=os.getenv("MOCK_MODE", "true").lower() == "true",
+        mock_mode=os.getenv("MOCK_MODE", "false").lower() == "true",
     )
 
 

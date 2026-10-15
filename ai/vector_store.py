@@ -296,3 +296,21 @@ def _get_or_compute(
     # --- Assemble the result array in the original order ---
     result = np.array([cached[did] for did in doc_ids])
     return result
+
+
+def clear_vector_cache():
+    """Clear all cached vectors from ChromaDB collections."""
+    global _co_collection, _fw_collection
+    try:
+        client = _get_chroma_client()
+        for col_name in ["course_outcomes", "framework_outcomes"]:
+            try:
+                client.delete_collection(col_name)
+            except Exception:
+                pass
+        _co_collection = None
+        _fw_collection = None
+        logger.info("ChromaDB vector store cleared.")
+    except Exception as e:
+        logger.warning(f"Could not clear ChromaDB: {e}")
+

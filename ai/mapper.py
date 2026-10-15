@@ -18,7 +18,7 @@ Supports three methods for research comparison:
 import logging
 from typing import List, Dict, Optional, Tuple
 
-from ai.preprocessor import preprocess_co, preprocess_po, get_enhanced_text
+from ai.preprocessor import preprocess_co, preprocess_po, get_enhanced_text, get_bloom_level
 from ai.embeddings import compute_similarity_matrix, compute_similarity_matrix_cached
 from ai.llm_reasoner import LLMProvider, MappingResult, get_llm_provider
 from ai.validator import validate_mappings, fix_mapping_result, ValidationResult
@@ -123,6 +123,8 @@ def generate_mappings_hybrid(
             "po_pso_code": po_pso_codes[j],
             "po_pso_text": po_pso_texts[j],
             "similarity_score": sim_score,
+            "bloom_level": get_bloom_level(co_texts[i]),
+            "action_verbs": co_preprocessed[i].get("action_verbs", []),
         }
         for i, j, sim_score in candidates
     ]
@@ -248,18 +250,22 @@ def generate_mappings_llm_only(
 
     logger.info("Running LLM-only method...")
 
-    results = []
+    from ai.preprocessor import get_bloom_level
+
+    # Build all pairs as candidate dicts and batch them through the provider
+    candidate_dicts = []
     for i, co_code in enumerate(co_codes):
         for j, po_pso_code in enumerate(po_pso_codes):
-            result = llm_provider.reason_mapping(
-                co_code=co_code,
-                co_text=co_texts[i],
-                po_pso_code=po_pso_code,
-                po_pso_text=po_pso_texts[j],
-                similarity_score=0.0,
-                context=context,
-            )
-            results.append(result)
+            candidate_dicts.append({
+                "co_code": co_code,
+                "co_text": co_texts[i],
+                "po_pso_code": po_pso_code,
+                "po_pso_text": po_pso_texts[j],
+                "similarity_score": 0.0,
+                "bloom_level": get_bloom_level(co_texts[i]),
+            })
+
+    results = llm_provider.reason_candidates_batch(candidate_dicts, context=context)
 
     # Fix results
     results = [fix_mapping_result(r) for r in results]

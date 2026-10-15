@@ -46,8 +46,108 @@ def create_subject(data: SubjectCreate, db: Session = Depends(get_db)):
 
 
 @router.get("", response_model=List[SubjectResponse])
-def list_subjects(db: Session = Depends(get_db)):
-    return db.query(Subject).all()
+def list_subjects(year: Optional[str] = None, department: Optional[str] = None, db: Session = Depends(get_db)):
+    query = db.query(Subject)
+    if year and year != "All":
+        query = query.filter(Subject.year == year)
+    if department and department != "All":
+        query = query.filter(Subject.department == department)
+    return query.order_by(Subject.course_name).all()
+
+
+@router.get("/meta/hierarchy")
+def get_hierarchy(db: Session = Depends(get_db)):
+    """Return distinct years, departments, and subjects tree for cascading dropdowns."""
+    subjects = db.query(Subject).order_by(Subject.course_name).all()
+    preferred_order = ["FE", "SE", "TE", "BE"]
+    all_years = list({s.year for s in subjects if s.year})
+    years = sorted(all_years, key=lambda y: preferred_order.index(y) if y in preferred_order else 99)
+    departments = sorted(list({s.department for s in subjects if s.department}))
+    
+    tree = {}
+    for y in years:
+        tree[y] = {}
+        for s in subjects:
+            if s.year == y:
+                d = s.department or "General"
+                if d not in tree[y]:
+                    tree[y][d] = []
+                tree[y][d].append({
+                    "id": s.id,
+                    "course_code": s.course_code,
+                    "course_name": s.course_name,
+                    "year": s.year,
+                    "department": s.department,
+                    "co_count": s.co_count,
+                    "framework_id": s.framework_id,
+                })
+                
+    return {
+        "years": years,
+        "departments": departments,
+        "tree": tree,
+        "total_subjects": len(subjects),
+    }
+
+
+@router.get("/{subject_id}/outcomes-status")
+def get_subject_outcomes_status(subject_id: int, db: Session = Depends(get_db)):
+    """Fetch COs and POs directly from DB for a subject, with status flag."""
+    subject = db.query(Subject).filter(Subject.id == subject_id).first()
+    if not subject:
+        raise HTTPException(status_code=404, detail="Subject not found")
+
+    cos = db.query(CourseOutcome).filter(CourseOutcome.subject_id == subject.id).order_by(CourseOutcome.co_code).all()
+    
+    pos = []
+    framework_name = None
+    if subject.framework_id:
+        framework = db.query(OutcomeFramework).filter(OutcomeFramework.id == subject.framework_id).first()
+        if framework:
+            framework_name = framework.name
+            pos = db.query(FrameworkOutcome).filter(FrameworkOutcome.framework_id == framework.id).order_by(FrameworkOutcome.outcome_code).all()
+    
+    # If no framework outcomes, check direct subject POs
+    if not pos:
+        subject_pos = db.query(ProgramOutcome).filter(ProgramOutcome.subject_id == subject.id).all()
+        subject_psos = db.query(ProgramSpecificOutcome).filter(ProgramSpecificOutcome.subject_id == subject.id).all()
+        for p in subject_pos:
+            pos.append({"outcome_code": p.po_code, "outcome_type": "PO", "description": p.description})
+        for p in subject_psos:
+            pos.append({"outcome_code": p.pso_code, "outcome_type": "PSO", "description": p.description})
+    else:
+        pos = [
+            {"id": p.id, "outcome_code": p.outcome_code, "outcome_type": p.outcome_type, "description": p.description}
+            for p in pos
+        ]
+
+    co_list = [
+        {
+            "id": c.id,
+            "co_code": c.co_code,
+            "description": c.description,
+            "univ_attainment": c.univ_attainment,
+            "internal_attainment": c.internal_attainment,
+        }
+        for c in cos
+    ]
+
+    has_cos = len(co_list) > 0
+
+    return {
+        "subject_id": subject.id,
+        "course_code": subject.course_code,
+        "course_name": subject.course_name,
+        "year": subject.year,
+        "department": subject.department,
+        "framework_id": subject.framework_id,
+        "framework_name": framework_name,
+        "has_outcomes": has_cos,
+        "co_count": len(co_list),
+        "po_count": len(pos),
+        "cos": co_list,
+        "pos": pos,
+    }
 
 
 @router.get("/{subject_id}", response_model=SubjectResponse)
